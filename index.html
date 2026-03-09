@@ -58,7 +58,17 @@
         <section class="card">
           <div class="cardHeader">
             <h2 class="cardTitle">我的倒计时</h2>
-            <div class="chip" id="countChip" aria-label="倒计时数量">0</div>
+            <div class="cardHeaderRight">
+              <button
+                id="sortBtn"
+                class="iconBtn"
+                type="button"
+                title="按目标时间排序（最近的在前）"
+              >
+                按时间排序
+              </button>
+              <div class="chip" id="countChip" aria-label="倒计时数量">0</div>
+            </div>
           </div>
 
           <div id="emptyState" class="empty">
@@ -66,7 +76,7 @@
             <div class="emptyDesc">左侧添加一个，保存后刷新页面也不会丢失。</div>
           </div>
 
-          <ul id="countdownList" class="list" aria-label="倒计时列表"></ul>
+           <ul id="countdownList" class="list" aria-label="倒计时列表"></ul>
         </section>
       </main>
 
@@ -78,4 +88,3 @@
     <script src="./script.js" defer></script>
   </body>
 </html>
-

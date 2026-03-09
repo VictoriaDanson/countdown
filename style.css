@@ -88,6 +88,12 @@ body {
   margin-bottom: 10px;
 }
 
+.cardHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -225,6 +231,18 @@ body {
   padding: 12px;
   box-shadow: 0 1px 0 rgba(15, 42, 29, 0.04);
   background: linear-gradient(180deg, rgba(31, 157, 85, 0.05), rgba(31, 157, 85, 0.02));
+  cursor: grab;
+  user-select: none;
+}
+
+.item:active {
+  cursor: grabbing;
+}
+
+.item.dragging {
+  opacity: 0.85;
+  box-shadow: 0 10px 24px rgba(13, 61, 38, 0.28);
+  transform: scale(1.01);
 }
 
 .itemTop {
@@ -328,4 +346,3 @@ body {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-

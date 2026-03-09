@@ -13,6 +13,7 @@ const els = {
   list: document.getElementById("countdownList"),
   empty: document.getElementById("emptyState"),
   chip: document.getElementById("countChip"),
+  sortBtn: document.getElementById("sortBtn"),
 };
 
 /** @returns {CountdownItem[]} */
@@ -98,7 +99,7 @@ function render(items) {
       const target = new Date(item.targetISO);
       const targetText = isNaN(target.getTime()) ? "无效时间" : formatTarget(target);
       return `
-        <li class="item" data-id="${escapeHtml(item.id)}">
+        <li class="item" data-id="${escapeHtml(item.id)}" draggable="true">
           <div class="itemTop">
             <div>
               <div class="itemTitle">${escapeHtml(item.title)}</div>
@@ -171,6 +172,7 @@ function clearForm() {
 
 let items = loadItems();
 let editingId = null;
+let draggingId = null;
 
 function enterEditMode(item) {
   editingId = item.id;
@@ -208,8 +210,7 @@ function clearFormAndExitEdit() {
   exitEditMode();
 }
 
-// sort: nearest first
-items.sort((a, b) => new Date(a.targetISO).getTime() - new Date(b.targetISO).getTime());
+// 初始渲染（使用本地存储中的顺序）
 render(items);
 tick(items);
 
@@ -225,13 +226,9 @@ els.form.addEventListener("submit", (e) => {
 
   if (editingId) {
     // 更新已存在的倒计时
-    items = items
-      .map((x) =>
-        x.id === editingId
-          ? { ...x, title: res.title, targetISO: res.targetISO }
-          : x,
-      )
-      .sort((a, b) => new Date(a.targetISO).getTime() - new Date(b.targetISO).getTime());
+    items = items.map((x) =>
+      x.id === editingId ? { ...x, title: res.title, targetISO: res.targetISO } : x,
+    );
     saveItems(items);
     render(items);
     tick(items);
@@ -250,9 +247,8 @@ els.form.addEventListener("submit", (e) => {
       createdAt: Date.now(),
     };
 
-    items = [newItem, ...items].sort(
-      (a, b) => new Date(a.targetISO).getTime() - new Date(b.targetISO).getTime(),
-    );
+    // 新增的倒计时默认加到最上面，之后可以拖动调整
+    items = [newItem, ...items];
     saveItems(items);
     render(items);
     tick(items);
@@ -300,7 +296,7 @@ els.list.addEventListener("click", (e) => {
 
 window.addEventListener("storage", (e) => {
   if (e.key !== STORAGE_KEY) return;
-  items = loadItems().sort((a, b) => new Date(a.targetISO).getTime() - new Date(b.targetISO).getTime());
+  items = loadItems();
   render(items);
   tick(items);
 });
@@ -309,3 +305,114 @@ window.addEventListener("beforeunload", () => {
   clearInterval(timer);
 });
 
+if (els.sortBtn) {
+  let sortAsc = true; // true: 近 -> 远, false: 远 -> 近
+
+  els.sortBtn.addEventListener("click", () => {
+    if (!items.length) return;
+
+    items = [...items].sort((a, b) => {
+      const ta = new Date(a.targetISO).getTime();
+      const tb = new Date(b.targetISO).getTime();
+      if (Number.isNaN(ta) && Number.isNaN(tb)) return 0;
+      if (Number.isNaN(ta)) return 1;
+      if (Number.isNaN(tb)) return -1;
+      return sortAsc ? ta - tb : tb - ta;
+    });
+
+    saveItems(items);
+    render(items);
+    tick(items);
+
+    sortAsc = !sortAsc;
+    if (sortAsc) {
+      setHint("已按时间从近到远排序", false);
+      els.sortBtn.textContent = "按时间排序";
+      els.sortBtn.title = "按目标时间排序（最近的在前）";
+    } else {
+      setHint("已按时间从远到近排序", false);
+      els.sortBtn.textContent = "按时间倒序";
+      els.sortBtn.title = "按目标时间排序（最远的在前）";
+    }
+  });
+}
+
+// ---- 拖动排序 ----
+
+// 重新根据当前 DOM 中 li 的顺序生成 items 并保存
+function syncItemsOrderFromDom() {
+  const ids = Array.from(els.list.querySelectorAll(".item"))
+    .map((li) => li.getAttribute("data-id"))
+    .filter(Boolean);
+
+  if (!ids.length) return;
+
+  const map = new Map(items.map((x) => [x.id, x]));
+  items = ids
+    .map((id) => map.get(id))
+    .filter(Boolean);
+
+  saveItems(items);
+}
+
+els.list.addEventListener("dragstart", (e) => {
+  const li = e.target.closest(".item");
+  if (!li) return;
+  const id = li.getAttribute("data-id");
+  if (!id) return;
+
+  draggingId = id;
+  li.classList.add("dragging");
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = "move";
+    // 一些浏览器要求设置 data 才会触发拖动
+    e.dataTransfer.setData("text/plain", id);
+  }
+});
+
+els.list.addEventListener("dragend", (e) => {
+  const li = e.target.closest(".item");
+  if (li) li.classList.remove("dragging");
+  draggingId = null;
+});
+
+els.list.addEventListener("dragover", (e) => {
+  if (!draggingId) return;
+  e.preventDefault();
+
+  const afterElement = (() => {
+    const itemsEls = Array.from(els.list.querySelectorAll(".item"));
+    const y = e.clientY;
+    let closest = null;
+    let closestOffset = Number.NEGATIVE_INFINITY;
+
+    for (const el of itemsEls) {
+      if (el.classList.contains("dragging")) continue;
+      const box = el.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closestOffset) {
+        closestOffset = offset;
+        closest = el;
+      }
+    }
+    return closest;
+  })();
+
+  const draggingEl = els.list.querySelector(".item.dragging");
+  if (!draggingEl) return;
+
+  if (!afterElement) {
+    els.list.appendChild(draggingEl);
+  } else {
+    els.list.insertBefore(draggingEl, afterElement);
+  }
+});
+
+els.list.addEventListener("drop", (e) => {
+  e.preventDefault();
+  if (!draggingId) return;
+  syncItemsOrderFromDom();
+  // 重新渲染是为了确保 DOM 与内部 items 完全一致
+  render(items);
+  tick(items);
+});
