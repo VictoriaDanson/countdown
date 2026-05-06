@@ -1,17 +1,6 @@
 const STORAGE_KEY = "countdown_items_v1";
 
-// 默认系统倒计时名称
-const SYSTEM_DEFAULT_NAME = "xiabanban";
-
-/**
- * @typedef {{
- *   id: string,
- *   title: string,
- *   targetISO: string,
- *   createdAt: number,
- *   isSystemDefault?: boolean
- * }} CountdownItem
- */
+/** @typedef {{ id: string, title: string, targetISO: string, createdAt: number }} CountdownItem */
 
 const els = {
   form: document.getElementById("countdownForm"),
@@ -41,7 +30,6 @@ function loadItems() {
         title: String(x.title || ""),
         targetISO: String(x.targetISO || ""),
         createdAt: Number(x.createdAt || Date.now()),
-        isSystemDefault: Boolean(x.isSystemDefault),
       }))
       .filter((x) => x.id && x.title && x.targetISO);
   } catch {
@@ -65,126 +53,6 @@ function setHint(message, isError = false) {
 
 function pad2(n) {
   return String(n).padStart(2, "0");
-}
-
-// ---- 节假日计算（周六日 + 可选法定节假日配置） ----
-
-// 节假日数据来源：holiday-data.js（由 Node 脚本生成），当前年份及下一年份
-const CURRENT_YEAR = new Date().getFullYear();
-const HOLIDAY_DATA = (typeof window !== "undefined" && window.HOLIDAY_DATA) || {};
-
-const HOLIDAY_DATES = [];
-const WORKDAY_OVERRIDES = [];
-
-for (const year of [CURRENT_YEAR, CURRENT_YEAR + 1]) {
-  const entry = HOLIDAY_DATA[String(year)];
-  if (!entry || typeof entry !== "object") continue;
-
-  if (Array.isArray(entry.HOLIDAY_DATES)) {
-    for (const d of entry.HOLIDAY_DATES) {
-      if (typeof d === "string") HOLIDAY_DATES.push(d);
-    }
-  }
-
-  if (Array.isArray(entry.WORKDAY_OVERRIDES)) {
-    for (const d of entry.WORKDAY_OVERRIDES) {
-      if (typeof d === "string") WORKDAY_OVERRIDES.push(d);
-    }
-  }
-}
-
-function dateKey(date) {
-  const y = date.getFullYear();
-  const m = pad2(date.getMonth() + 1);
-  const d = pad2(date.getDate());
-  return `${y}-${m}-${d}`;
-}
-
-function isWeekend(date) {
-  const day = date.getDay();
-  return day === 0 || day === 6;
-}
-
-function isHolidayDate(date) {
-  const key = dateKey(date);
-  if (HOLIDAY_DATES.indexOf(key) !== -1) return true;
-
-  if (isWeekend(date)) {
-    if (WORKDAY_OVERRIDES.indexOf(key) !== -1) return false;
-    return true;
-  }
-
-  return false;
-}
-
-function buildDateTime(date, h, m, s) {
-  const d = new Date(date.getTime());
-  d.setHours(h, m, s, 0);
-  return d;
-}
-
-// 查找从当前时间起最近的一次节假日的「前一天 18:00」：
-// - xiabanban 默认目标时间统一为 18:00
-// - 从明天开始往后找节假日
-// - 对每个节假日，计算其前一天 18:00，选第一个还在未来的作为目标
-function findNextHolidayTarget(now) {
-  const today = new Date(now.getTime());
-  today.setHours(0, 0, 0, 0);
-  const candidate = new Date(today.getTime());
-
-  for (let i = 1; i <= 365; i++) {
-    candidate.setDate(candidate.getDate() + 1);
-
-    if (!isHolidayDate(candidate)) {
-      continue;
-    }
-
-    // 节假日的前一天 18:00 作为目标
-    const dayBefore = new Date(candidate.getTime());
-    dayBefore.setDate(dayBefore.getDate() - 1);
-    const target = buildDateTime(dayBefore, 18, 0, 0);
-
-    if (target.getTime() > now.getTime()) {
-      return target;
-    }
-  }
-
-  // 兜底：如果一年内都没找到合适的目标，就用今天 18:00
-  return buildDateTime(today, 18, 0, 0);
-}
-
-function ensureSystemDefaultCountdown() {
-  const now = new Date();
-  const targetDate = findNextHolidayTarget(now);
-  const targetISO = targetDate.toISOString();
-
-  let existing = null;
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].isSystemDefault) {
-      existing = items[i];
-      break;
-    }
-  }
-
-  if (!existing) {
-    const newItem = {
-      id: uid(),
-      title: SYSTEM_DEFAULT_NAME,
-      targetISO,
-      createdAt: Date.now(),
-      isSystemDefault: true,
-    };
-    items = [newItem, ...items];
-    saveItems(items);
-    return;
-  }
-
-  const currentTarget = new Date(existing.targetISO);
-  if (Number.isNaN(currentTarget.getTime()) || currentTarget.getTime() <= now.getTime()) {
-    existing.targetISO = targetISO;
-    existing.isSystemDefault = true;
-    saveItems(items);
-  }
 }
 
 function formatTarget(targetDate) {
@@ -230,7 +98,6 @@ function render(items) {
     .map((item) => {
       const target = new Date(item.targetISO);
       const targetText = isNaN(target.getTime()) ? "无效时间" : formatTarget(target);
-      const isSystemDefault = Boolean(item.isSystemDefault);
       return `
         <li class="item" data-id="${escapeHtml(item.id)}" draggable="true">
           <div class="itemTop">
@@ -238,18 +105,14 @@ function render(items) {
               <div class="itemTitle">${escapeHtml(item.title)}</div>
               <div class="itemMeta">目标：${escapeHtml(targetText)}</div>
             </div>
-            ${
-              isSystemDefault
-                ? ""
-                : `<div class="itemActions">
-                     <button class="iconBtn" type="button" data-action="edit" aria-label="编辑">
-                       编辑
-                     </button>
-                     <button class="iconBtn danger" type="button" data-action="delete" aria-label="删除">
-                       删除
-                     </button>
-                   </div>`
-            }
+            <div class="itemActions">
+              <button class="iconBtn" type="button" data-action="edit" aria-label="编辑">
+                编辑
+              </button>
+              <button class="iconBtn danger" type="button" data-action="delete" aria-label="删除">
+                删除
+              </button>
+            </div>
           </div>
           <div class="timeLeft" data-role="time">
             <div class="pill"><div class="pillNum" data-k="days">-</div><div class="pillLabel">天</div></div>
@@ -347,9 +210,6 @@ function clearFormAndExitEdit() {
   exitEditMode();
 }
 
-// 确保存在一个名为 "xiabanban" 的默认倒计时
-ensureSystemDefaultCountdown();
-
 // 初始渲染（使用本地存储中的顺序）
 render(items);
 tick(items);
@@ -413,15 +273,6 @@ els.list.addEventListener("click", (e) => {
   const id = li.getAttribute("data-id");
   if (!id) return;
 
-  const item = items.find((x) => x.id === id);
-  if (!item) return;
-
-  // 系统默认倒计时不可编辑或删除
-  if (item.isSystemDefault) {
-    setHint("默认倒计时不可编辑或删除", true);
-    return;
-  }
-
   if (action === "delete") {
     items = items.filter((x) => x.id !== id);
     saveItems(items);
@@ -437,6 +288,8 @@ els.list.addEventListener("click", (e) => {
       }
     }
   } else if (action === "edit") {
+    const item = items.find((x) => x.id === id);
+    if (!item) return;
     enterEditMode(item);
   }
 });
