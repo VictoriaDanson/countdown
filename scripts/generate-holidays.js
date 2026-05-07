@@ -39,8 +39,43 @@ function fetchJson(url) {
   });
 }
 
+// 需要支持快速预设的固定节日列表
+const FESTIVAL_WHITELIST = [
+  "元旦",
+  "春节",
+  "清明节",
+  "劳动节",
+  "端午节",
+  "中秋节",
+  "国庆节",
+];
+
 /**
- * 从节假日接口中构造 HOLIDAY_DATES 与 WORKDAY_OVERRIDES
+ * 根据接口返回的 meta 信息判断归属的节日名称（只返回白名单中的节日）。
+ * @param {Record<string, any>} meta
+ * @returns {string|null}
+ */
+function detectFestivalName(meta) {
+  if (!meta || typeof meta !== "object") return null;
+  const rawTarget = typeof meta.target === "string" ? meta.target : "";
+  const rawName = typeof meta.name === "string" ? meta.name : "";
+  const s = rawTarget || rawName;
+
+  if (!s) return null;
+
+  if (s.includes("元旦")) return "元旦";
+  if (s.includes("春节")) return "春节";
+  if (s.includes("清明")) return "清明节";
+  if (s.includes("劳动")) return "劳动节";
+  if (s.includes("端午")) return "端午节";
+  if (s.includes("中秋")) return "中秋节";
+  if (s.includes("国庆")) return "国庆节";
+
+  return null;
+}
+
+/**
+ * 从节假日接口中构造 HOLIDAY_DATES、WORKDAY_OVERRIDES 与 FESTIVAL_PRESETS
  * 仅保留 "当前日期之后" 的节假日与周末补班日。
  * @param {number} year
  * @param {Record<string, any>} holidayMap
@@ -49,9 +84,11 @@ function fetchJson(url) {
 function buildYearArrays(year, holidayMap, minDate) {
   const holidayDates = [];
   const workdayOverrides = [];
+   // FESTIVAL_PRESETS: { [festivalName]: "YYYY-MM-DD" }
+  const festivalPresets = {};
 
   if (!holidayMap || typeof holidayMap !== "object") {
-    return { holidayDates, workdayOverrides };
+    return { holidayDates, workdayOverrides, festivalPresets };
   }
 
   for (const [dateKey, info] of Object.entries(holidayMap)) {
@@ -76,6 +113,16 @@ function buildYearArrays(year, holidayMap, minDate) {
     const isHoliday = meta.isHoliday === true || meta.holiday === true;
     if (isHoliday) {
       holidayDates.push(fullDateStr);
+
+      // 记录节日预设：从当前日期起，该节日的最近一天
+      const festivalName = detectFestivalName(meta);
+      if (festivalName && FESTIVAL_WHITELIST.includes(festivalName)) {
+        const existing = festivalPresets[festivalName];
+        if (!existing || fullDateStr < existing) {
+          festivalPresets[festivalName] = fullDateStr;
+        }
+      }
+
       continue;
     }
 
@@ -89,7 +136,7 @@ function buildYearArrays(year, holidayMap, minDate) {
   holidayDates.sort();
   workdayOverrides.sort();
 
-  return { holidayDates, workdayOverrides };
+  return { holidayDates, workdayOverrides, festivalPresets };
 }
 
 async function fetchYearHoliday(year, minDate) {
@@ -127,10 +174,14 @@ async function main() {
     try {
       console.log(`Fetching holiday data for year ${year}...`);
       const minDate = year === now.getFullYear() ? now : new Date(`${year}-01-01T00:00:00`);
-      const { holidayDates, workdayOverrides } = await fetchYearHoliday(year, minDate);
+      const { holidayDates, workdayOverrides, festivalPresets } = await fetchYearHoliday(
+        year,
+        minDate,
+      );
       allData[year] = {
         HOLIDAY_DATES: holidayDates,
         WORKDAY_OVERRIDES: workdayOverrides,
+        FESTIVAL_PRESETS: festivalPresets,
       };
       console.log(
         `Year ${year}: holidays=${holidayDates.length}, weekend-work=${workdayOverrides.length}`,

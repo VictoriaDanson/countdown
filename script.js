@@ -25,6 +25,7 @@ const els = {
   empty: document.getElementById("emptyState"),
   chip: document.getElementById("countChip"),
   sortBtn: document.getElementById("sortBtn"),
+  presetBar: document.getElementById("presetBar"),
 };
 
 /** @returns {CountdownItem[]} */
@@ -69,16 +70,17 @@ function pad2(n) {
 
 // ---- 节假日计算（周六日 + 可选法定节假日配置） ----
 
-// 节假日数据来源：holiday-data.js（由 Node 脚本生成），当前年份及下一年份
+// 节假日数据来源：holiday-data.js（由 Node 脚本生成）
 const CURRENT_YEAR = new Date().getFullYear();
 const HOLIDAY_DATA = (typeof window !== "undefined" && window.HOLIDAY_DATA) || {};
 
 const HOLIDAY_DATES = [];
 const WORKDAY_OVERRIDES = [];
+let FESTIVAL_PRESETS = {};
 
-for (const year of [CURRENT_YEAR, CURRENT_YEAR + 1]) {
-  const entry = HOLIDAY_DATA[String(year)];
-  if (!entry || typeof entry !== "object") continue;
+(() => {
+  const entry = HOLIDAY_DATA[String(CURRENT_YEAR)];
+  if (!entry || typeof entry !== "object") return;
 
   if (Array.isArray(entry.HOLIDAY_DATES)) {
     for (const d of entry.HOLIDAY_DATES) {
@@ -91,7 +93,11 @@ for (const year of [CURRENT_YEAR, CURRENT_YEAR + 1]) {
       if (typeof d === "string") WORKDAY_OVERRIDES.push(d);
     }
   }
-}
+
+  if (entry.FESTIVAL_PRESETS && typeof entry.FESTIVAL_PRESETS === "object") {
+    FESTIVAL_PRESETS = entry.FESTIVAL_PRESETS;
+  }
+})();
 
 function dateKey(date) {
   const y = date.getFullYear();
@@ -121,6 +127,45 @@ function buildDateTime(date, h, m, s) {
   const d = new Date(date.getTime());
   d.setHours(h, m, s, 0);
   return d;
+}
+
+// ---- 法定节假日快速预设：节日按钮 + 00:00 目标时间 ----
+
+const FESTIVAL_ORDER = [
+  "元旦",
+  "春节",
+  "清明节",
+  "劳动节",
+  "端午节",
+  "中秋节",
+  "国庆节",
+];
+
+function renderFestivalPresets() {
+  if (!els.presetBar) return;
+
+  const names = FESTIVAL_ORDER.filter((name) =>
+    Object.prototype.hasOwnProperty.call(FESTIVAL_PRESETS, name),
+  );
+
+  if (!names.length) return;
+
+  const html = names
+    .map(
+      (name) => `
+        <button
+          type="button"
+          class="iconBtn"
+          data-festival="${name}"
+          title="快速预设：${name}"
+        >
+          ${name}
+        </button>
+      `,
+    )
+    .join("");
+
+  els.presetBar.insertAdjacentHTML("beforeend", html);
 }
 
 // 查找从当前时间起最近的一次节假日的「前一天 18:00」：
@@ -263,6 +308,19 @@ function render(items) {
     .join("");
 }
 
+// 按目标时间从近到远排序
+/** @param {CountdownItem[]} list */
+function sortItemsByTimeAsc(list) {
+  return [...list].sort((a, b) => {
+    const ta = new Date(a.targetISO).getTime();
+    const tb = new Date(b.targetISO).getTime();
+    if (Number.isNaN(ta) && Number.isNaN(tb)) return 0;
+    if (Number.isNaN(ta)) return 1;
+    if (Number.isNaN(tb)) return -1;
+    return ta - tb;
+  });
+}
+
 /** @param {CountdownItem[]} items */
 function tick(items) {
   const now = Date.now();
@@ -350,6 +408,9 @@ function clearFormAndExitEdit() {
 // 确保存在一个名为 "xiabanban" 的默认倒计时
 ensureSystemDefaultCountdown();
 
+// 初始渲染法定节假日快速预设按钮
+renderFestivalPresets();
+
 // 初始渲染（使用本地存储中的顺序）
 render(items);
 tick(items);
@@ -369,6 +430,8 @@ els.form.addEventListener("submit", (e) => {
     items = items.map((x) =>
       x.id === editingId ? { ...x, title: res.title, targetISO: res.targetISO } : x,
     );
+    // 保存前按时间从近到远排序
+    items = sortItemsByTimeAsc(items);
     saveItems(items);
     render(items);
     tick(items);
@@ -387,8 +450,8 @@ els.form.addEventListener("submit", (e) => {
       createdAt: Date.now(),
     };
 
-    // 新增的倒计时默认加到最上面，之后可以拖动调整
-    items = [newItem, ...items];
+    // 新增后按时间从近到远排序
+    items = sortItemsByTimeAsc([newItem, ...items]);
     saveItems(items);
     render(items);
     tick(items);
@@ -440,6 +503,34 @@ els.list.addEventListener("click", (e) => {
     enterEditMode(item);
   }
 });
+
+// 节日快速预设：点击按钮，自动填充标题/日期/时间（00:00），等待用户保存
+if (els.presetBar) {
+  els.presetBar.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-festival]");
+    if (!btn) return;
+
+    const festName = btn.getAttribute("data-festival");
+    if (!festName) return;
+
+    const dateKey = FESTIVAL_PRESETS[festName];
+    if (!dateKey) {
+      setHint(`未找到【${festName}】的节假日日期，请先更新节假日数据`, true);
+      return;
+    }
+
+    // 退出编辑状态，清空表单
+    exitEditMode();
+    clearForm();
+
+    // 快速预设：标题 = 节日名，日期 = 节日当天，时间 = 00:00
+    els.title.value = festName;
+    els.date.value = dateKey;
+    els.time.value = "00:00";
+
+    setHint(`已应用【${festName}】预设（${dateKey} 00:00），请确认后保存。`, false);
+  });
+}
 
 window.addEventListener("storage", (e) => {
   if (e.key !== STORAGE_KEY) return;
