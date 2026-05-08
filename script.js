@@ -26,6 +26,7 @@ const els = {
   chip: document.getElementById("countChip"),
   sortBtn: document.getElementById("sortBtn"),
   presetBar: document.getElementById("presetBar"),
+  holidayTts: document.getElementById("holidayTts"),
 };
 
 /** @returns {CountdownItem[]} */
@@ -542,6 +543,25 @@ window.addEventListener("storage", (e) => {
 window.addEventListener("beforeunload", () => {
   clearInterval(timer);
 });
+
+// 最近放假安排 TTS 文案
+function loadHolidayTts() {
+  if (!els.holidayTts) return;
+
+  fetch("https://timor.tech/api/holiday/tts")
+    .then((res) => res.json())
+    .then((data) => {
+      if (data && data.code === 0 && data.tts) {
+        els.holidayTts.textContent = data.tts;
+      }
+    })
+    .catch(() => {
+      // 忽略错误，不展示文案即可
+    });
+}
+
+// 页面加载时拉取一次文案
+loadHolidayTts();
 
 if (els.sortBtn) {
   let sortAsc = true; // true: 近 -> 远, false: 远 -> 近

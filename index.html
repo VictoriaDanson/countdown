@@ -12,7 +12,7 @@
       <header class="header">
         <div>
           <h1 class="title">倒计时</h1>
-          <p class="subtitle">新增、保存、刷新不丢失</p>
+          <p id="holidayTts" class="subtitle" aria-live="polite"></p>
         </div>
       </header>
 
@@ -81,13 +81,10 @@
             <div class="emptyDesc">左侧添加一个，保存后刷新页面也不会丢失。</div>
           </div>
 
-           <ul id="countdownList" class="list" aria-label="倒计时列表"></ul>
+          <ul id="countdownList" class="list" aria-label="倒计时列表"></ul>
         </section>
       </main>
-
-      <footer class="footer">
-        <span>数据保存在本地浏览器（localStorage）</span>
-      </footer>
+      <footer class="footer">版权所有 © 2026 倒计时</footer>
     </div>
 
     <script src="./holiday-data.js"></script>
