@@ -76,12 +76,11 @@ function detectFestivalName(meta) {
 
 /**
  * 从节假日接口中构造 HOLIDAY_DATES、WORKDAY_OVERRIDES 与 FESTIVAL_PRESETS
- * 仅保留 "当前日期之后" 的节假日与周末补班日。
+ * 生成该年份的全年数据，不再做按当前日期截断的过滤。
  * @param {number} year
  * @param {Record<string, any>} holidayMap
- * @param {Date} minDate 仅保留 >= minDate 的日期
  */
-function buildYearArrays(year, holidayMap, minDate) {
+function buildYearArrays(year, holidayMap) {
   const holidayDates = [];
   const workdayOverrides = [];
    // FESTIVAL_PRESETS: { [festivalName]: "YYYY-MM-DD" }
@@ -104,11 +103,6 @@ function buildYearArrays(year, holidayMap, minDate) {
 
     const d = new Date(fullDateStr);
     if (Number.isNaN(d.getTime())) continue;
-
-    // 只保留当前日期之后（含当天）的记录
-    if (minDate && d.getTime() < minDate.getTime()) {
-      continue;
-    }
 
     const isHoliday = meta.isHoliday === true || meta.holiday === true;
     if (isHoliday) {
@@ -139,7 +133,7 @@ function buildYearArrays(year, holidayMap, minDate) {
   return { holidayDates, workdayOverrides, festivalPresets };
 }
 
-async function fetchYearHoliday(year, minDate) {
+async function fetchYearHoliday(year) {
   const url = `https://timor.tech/api/holiday/year/${year}`;
   // 若需替换为其他节假日 API，可修改此 URL 及解析逻辑
   const data = await fetchJson(url);
@@ -152,7 +146,7 @@ async function fetchYearHoliday(year, minDate) {
   }
 
   const holidayMap = data.holiday || data.data || data.result || {};
-  return buildYearArrays(year, holidayMap, minDate);
+  return buildYearArrays(year, holidayMap);
 }
 
 async function main() {
@@ -166,18 +160,32 @@ async function main() {
     process.exit(1);
   }
 
-  // 只生成“当前年份”数据，并且只保留当前日期之后的记录
+  // 只生成“当前年份”的全年数据；旧年份数据会从 holiday-data.js 中读取并保留
   const years = [baseYear];
-  const allData = {};
+
+  const outPath = path.join(__dirname, "..", "holiday-data.js");
+
+  /** @type {Record<string, any>} */
+  let allData = {};
+  if (fs.existsSync(outPath)) {
+    try {
+      const raw = fs.readFileSync(outPath, "utf8");
+      // 在隔离的 window 对象上执行文件内容以取回已有 HOLIDAY_DATA
+      const fn = new Function("window", raw + "; return window.HOLIDAY_DATA || {};");
+      allData = fn({});
+    } catch (err) {
+      console.error(
+        "解析现有 holiday-data.js 失败，将从空数据开始：",
+        err && err.message ? err.message : err,
+      );
+      allData = {};
+    }
+  }
 
   for (const year of years) {
     try {
       console.log(`Fetching holiday data for year ${year}...`);
-      const minDate = year === now.getFullYear() ? now : new Date(`${year}-01-01T00:00:00`);
-      const { holidayDates, workdayOverrides, festivalPresets } = await fetchYearHoliday(
-        year,
-        minDate,
-      );
+      const { holidayDates, workdayOverrides, festivalPresets } = await fetchYearHoliday(year);
       allData[year] = {
         HOLIDAY_DATES: holidayDates,
         WORKDAY_OVERRIDES: workdayOverrides,
@@ -191,7 +199,6 @@ async function main() {
     }
   }
 
-  const outPath = path.join(__dirname, "..", "holiday-data.js");
   const content =
     "// 自动生成，请勿手动修改\n" +
     "// 生成命令：node scripts/generate-holidays.js [起始年份]\n" +

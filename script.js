@@ -147,14 +147,14 @@ const FESTIVAL_ORDER = [
  * 判断当前节假日快速预设是否需要更新
  * 规则：
  * 1. 当前年份在 HOLIDAY_DATA 里不存在
- * 2. 当前年份存在，但 FESTIVAL_PRESETS 缺少 FESTIVAL_ORDER 中任意节日
- * 3. 距离当前年份结束 <= 15 天，提示准备更新下一年
- * 4. 当前年份的 HOLIDAY_DATES 任一节日早于今天
+ * 2. 距离当前年份结束 <= 15 天，且下一年数据尚未准备好时，提示准备更新下一年
  */
 function needsFestivalPresetUpdate(now) {
   const year = now.getFullYear();
   const yearKey = String(year);
+  const nextYearKey = String(year + 1);
   const entry = HOLIDAY_DATA[yearKey];
+  const nextEntry = HOLIDAY_DATA[nextYearKey];
 
   /** @type {string[]} */
   const reasons = [];
@@ -162,24 +162,13 @@ function needsFestivalPresetUpdate(now) {
   // 1. 当前年份在 HOLIDAY_DATA 里不存在
   if (!entry || typeof entry !== "object") {
     reasons.push(`当前年份 ${year} 的节假日数据在 HOLIDAY_DATA 中不存在。`);
-  } else {
-    const holidayDates = Array.isArray(entry.HOLIDAY_DATES) ? entry.HOLIDAY_DATES : [];
-
-    // 4. 当前年份的 HOLIDAY_DATES 任一节日早于今天
-    if (holidayDates.length > 0) {
-      const todayKey = dateKey(now);
-      const anyPassed = holidayDates.some((d) => d < todayKey);
-      if (anyPassed) {
-        reasons.push("本年度的节假日中，已经有部分日期早于今天。");
-      }
-    }
   }
 
-  // 3. 距离当前年份结束 <= 15 天
+  // 2. 距离当前年份结束 <= 15 天，且下一年数据尚未准备好
   const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
   const msLeft = yearEnd.getTime() - now.getTime();
   const daysLeft = msLeft / (24 * 60 * 60 * 1000);
-  if (daysLeft <= 15) {
+  if (daysLeft <= 15 && (!nextEntry || typeof nextEntry !== "object" || nextEntry.HOLIDAY_DATES?.length === 0)) {
     reasons.push(
       `距离 ${year} 年结束仅剩约 ${Math.max(0, Math.floor(daysLeft))} 天，请准备更新 ${
         year + 1
@@ -196,9 +185,15 @@ function needsFestivalPresetUpdate(now) {
 function renderFestivalPresets() {
   if (!els.presetBar) return;
 
-  const names = FESTIVAL_ORDER.filter((name) =>
-    Object.prototype.hasOwnProperty.call(FESTIVAL_PRESETS, name),
-  );
+  const todayKey = dateKey(new Date());
+
+  // 只展示“今天之后”的节假日快速预设
+  const names = FESTIVAL_ORDER.filter((name) => {
+    if (!Object.prototype.hasOwnProperty.call(FESTIVAL_PRESETS, name)) return false;
+    const d = FESTIVAL_PRESETS[name];
+    if (typeof d !== "string" || !d) return false;
+    return d > todayKey;
+  });
 
   if (!names.length) return;
 
