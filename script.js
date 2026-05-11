@@ -27,6 +27,7 @@ const els = {
   sortBtn: document.getElementById("sortBtn"),
   presetBar: document.getElementById("presetBar"),
   holidayTts: document.getElementById("holidayTts"),
+  presetUpdateHint: document.getElementById("presetUpdateHint"),
 };
 
 /** @returns {CountdownItem[]} */
@@ -141,6 +142,56 @@ const FESTIVAL_ORDER = [
   "中秋节",
   "国庆节",
 ];
+
+/**
+ * 判断当前节假日快速预设是否需要更新
+ * 规则：
+ * 1. 当前年份在 HOLIDAY_DATA 里不存在
+ * 2. 当前年份存在，但 FESTIVAL_PRESETS 缺少 FESTIVAL_ORDER 中任意节日
+ * 3. 距离当前年份结束 <= 15 天，提示准备更新下一年
+ * 4. 当前年份的 HOLIDAY_DATES 任一节日早于今天
+ */
+function needsFestivalPresetUpdate(now) {
+  const year = now.getFullYear();
+  const yearKey = String(year);
+  const entry = HOLIDAY_DATA[yearKey];
+
+  /** @type {string[]} */
+  const reasons = [];
+
+  // 1. 当前年份在 HOLIDAY_DATA 里不存在
+  if (!entry || typeof entry !== "object") {
+    reasons.push(`当前年份 ${year} 的节假日数据在 HOLIDAY_DATA 中不存在。`);
+  } else {
+    const holidayDates = Array.isArray(entry.HOLIDAY_DATES) ? entry.HOLIDAY_DATES : [];
+
+    // 4. 当前年份的 HOLIDAY_DATES 任一节日早于今天
+    if (holidayDates.length > 0) {
+      const todayKey = dateKey(now);
+      const anyPassed = holidayDates.some((d) => d < todayKey);
+      if (anyPassed) {
+        reasons.push("本年度的节假日中，已经有部分日期早于今天。");
+      }
+    }
+  }
+
+  // 3. 距离当前年份结束 <= 15 天
+  const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+  const msLeft = yearEnd.getTime() - now.getTime();
+  const daysLeft = msLeft / (24 * 60 * 60 * 1000);
+  if (daysLeft <= 15) {
+    reasons.push(
+      `距离 ${year} 年结束仅剩约 ${Math.max(0, Math.floor(daysLeft))} 天，请准备更新 ${
+        year + 1
+      } 年的节假日数据。`,
+    );
+  }
+
+  return {
+    need: reasons.length > 0,
+    reasons,
+  };
+}
 
 function renderFestivalPresets() {
   if (!els.presetBar) return;
@@ -411,6 +462,17 @@ ensureSystemDefaultCountdown();
 
 // 初始渲染法定节假日快速预设按钮
 renderFestivalPresets();
+
+// 判断是否需要更新快速预设，并在页面显示提示
+if (els.presetUpdateHint) {
+  const { need, reasons } = needsFestivalPresetUpdate(new Date());
+  if (need) {
+    els.presetUpdateHint.textContent =
+      "节假日快速预设可能需要更新，请更新 holiday-data.js：" + reasons.join(" ");
+  } else {
+    els.presetUpdateHint.textContent = "";
+  }
+}
 
 // 初始渲染（使用本地存储中的顺序）
 render(items);
