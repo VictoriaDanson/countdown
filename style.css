@@ -205,6 +205,10 @@ body {
   font-weight: 600;
 }
 
+.hint:empty {
+  display: none;
+}
+
 .empty {
   border: 1px dashed rgba(31, 157, 85, 0.35);
   border-radius: var(--radius);
