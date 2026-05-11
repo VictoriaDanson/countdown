@@ -426,6 +426,34 @@ els.form.addEventListener("submit", (e) => {
     return;
   }
 
+  // 检查是否存在相同标题和目标时间的倒计时，避免重复保存
+  const duplicateItem = items.find(
+    (x) =>
+      (!editingId || x.id !== editingId) &&
+      x.title === res.title &&
+      x.targetISO === res.targetISO,
+  );
+  if (duplicateItem) {
+    setHint("已存在相同的倒计时，请勿重复保存", true);
+
+    // 列表中高亮重复的卡片：绿色渐变边框闪烁 2 下后消失
+    const li = els.list.querySelector(`.item[data-id="${CSS.escape(duplicateItem.id)}"]`);
+    if (li) {
+      li.classList.remove("duplicate-highlight");
+      // 强制回流，确保重复添加类时动画会重新触发
+      void li.offsetWidth;
+      li.classList.add("duplicate-highlight");
+
+      const handleAnimationEnd = () => {
+        li.classList.remove("duplicate-highlight");
+        li.removeEventListener("animationend", handleAnimationEnd);
+      };
+      li.addEventListener("animationend", handleAnimationEnd);
+    }
+
+    return;
+  }
+
   if (editingId) {
     // 更新已存在的倒计时
     items = items.map((x) =>
