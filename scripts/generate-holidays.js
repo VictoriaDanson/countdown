@@ -163,7 +163,7 @@ async function main() {
   // 只生成“当前年份”的全年数据；旧年份数据会从 holiday-data.js 中读取并保留
   const years = [baseYear];
 
-  const outPath = path.join(__dirname, "..", "holiday-data.js");
+  const outPath = path.join(__dirname, "..", "/js/holiday-data.js");
 
   /** @type {Record<string, any>} */
   let allData = {};

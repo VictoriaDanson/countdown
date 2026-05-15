@@ -6,89 +6,131 @@
     <meta name="color-scheme" content="light" />
     <title>测试网页</title>
     <link rel="stylesheet" href="./style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/lunisolar@2"></script>
   </head>
   <body>
     <div class="page">
       <header class="header">
         <div>
-          <h1 class="title">倒计时</h1>
+          <h1 class="title">日历倒计时</h1>
           <p id="holidayTts" class="subtitle" aria-live="polite"></p>
         </div>
       </header>
 
       <main class="grid">
         <section class="card">
-          <h2 class="cardTitle">添加新倒计时</h2>
-          <form id="countdownForm" class="form" autocomplete="off">
-            <label class="field">
-              <span class="label">标题</span>
-              <input
-                id="titleInput"
-                class="input"
-                type="text"
-                maxlength="40"
-                placeholder="例如：生日 / 假期 / 项目截止"
-                required
-              />
-            </label>
-
-            <div class="presets" id="presetBar">
-              <span class="label">快速预设：</span>
-              <!-- 节日按钮由脚本动态插入 -->
-            </div>
-            <p id="presetUpdateHint" class="hint warning" aria-live="polite"></p>
-
-            <div class="row">
-              <label class="field">
-                <span class="label">目标日期</span>
-                <input id="dateInput" class="input" type="date" required />
-              </label>
-
-              <label class="field">
-                <span class="label">目标时间</span>
-                <input id="timeInput" class="input" type="time" required />
-              </label>
-            </div>
-
-             <div class="actions">
-              <button id="saveBtn" class="btn primary" type="submit">保存倒计时</button>
-              <button id="clearBtn" class="btn ghost" type="button" title="清空输入">
-                清空
+          <h2 class="cardTitle">日历</h2>
+          <div class="calendar" id="calendar">
+            <div class="calendarHeader">
+              <button type="button" class="calendarBtn" id="prevMonth">
+                &lt;
+              </button>
+              <h3 class="calendarMonth" id="currentMonth"></h3>
+              <button type="button" class="calendarBtn" id="nextMonth">
+                &gt;
               </button>
             </div>
-
-            <p id="formHint" class="hint" role="status" aria-live="polite"></p>
-          </form>
-        </section>
-
-        <section class="card">
-          <div class="cardHeader">
-            <h2 class="cardTitle">我的倒计时</h2>
-            <div class="cardHeaderRight">
-              <button
-                id="sortBtn"
-                class="iconBtn"
-                type="button"
-                title="按目标时间排序（最近的在前）"
-              >
-                按时间排序
-              </button>
-              <div class="chip" id="countChip" aria-label="倒计时数量">0</div>
+            <div class="calendarGrid">
+              <div class="calendarWeekday">一</div>
+              <div class="calendarWeekday">二</div>
+              <div class="calendarWeekday">三</div>
+              <div class="calendarWeekday">四</div>
+              <div class="calendarWeekday">五</div>
+              <div class="calendarWeekday">六</div>
+              <div class="calendarWeekday">日</div>
             </div>
+            <div class="calendarDays" id="calendarDays"></div>
           </div>
-
-          <div id="emptyState" class="empty">
-            <div class="emptyTitle">还没有倒计时</div>
-            <div class="emptyDesc">左侧添加一个，保存后刷新页面也不会丢失。</div>
-          </div>
-
-          <ul id="countdownList" class="list" aria-label="倒计时列表"></ul>
         </section>
+
+        <div class="right-column">
+          <section class="card">
+            <h2 class="cardTitle">添加新倒计时</h2>
+            <form id="countdownForm" class="form" autocomplete="off">
+              <label class="field">
+                <span class="label">标题</span>
+                <input
+                  id="titleInput"
+                  class="input"
+                  type="text"
+                  maxlength="40"
+                  placeholder="例如：生日 / 假期 / 项目截止"
+                  required
+                />
+              </label>
+
+              <div class="presets" id="presetBar">
+                <span class="label">快速预设：</span>
+                <!-- 节日按钮由脚本动态插入 -->
+              </div>
+              <p
+                id="presetUpdateHint"
+                class="hint warning"
+                aria-live="polite"
+              ></p>
+
+              <div class="row">
+                <label class="field">
+                  <span class="label">目标日期</span>
+                  <input id="dateInput" class="input" type="date" required />
+                </label>
+
+                <label class="field">
+                  <span class="label">目标时间</span>
+                  <input id="timeInput" class="input" type="time" required />
+                </label>
+              </div>
+
+              <div class="actions">
+                <button id="saveBtn" class="btn primary" type="submit">
+                  保存倒计时
+                </button>
+                <button
+                  id="clearBtn"
+                  class="btn ghost"
+                  type="button"
+                  title="清空输入"
+                >
+                  清空
+                </button>
+              </div>
+
+              <p id="formHint" class="hint" role="status" aria-live="polite"></p>
+            </form>
+          </section>
+
+          <section class="card">
+            <div class="cardHeader">
+              <h2 class="cardTitle">我的倒计时</h2>
+              <div class="cardHeaderRight">
+                <button
+                  id="sortBtn"
+                  class="iconBtn"
+                  type="button"
+                  title="按目标时间排序（最近的在前）"
+                >
+                  按时间排序
+                </button>
+                <div class="chip" id="countChip" aria-label="倒计时数量">0</div>
+              </div>
+            </div>
+
+            <div id="emptyState" class="empty">
+              <div class="emptyTitle">还没有倒计时</div>
+              <div class="emptyDesc">
+                上方添加一个，保存后刷新页面也不会丢失。
+              </div>
+            </div>
+
+            <ul id="countdownList" class="list" aria-label="倒计时列表"></ul>
+          </section>
+        </div>
       </main>
+    </div>
       <footer class="footer">版权所有 © 2026 倒计时</footer>
     </div>
-
-    <script src="./holiday-data.js"></script>
-    <script src="./script.js" defer></script>
+    <script src="./js/holiday-data.js"></script>
+    <script src="./js/script.js"></script>
+    <script src="./js/calendar.js"></script>
   </body>
 </html>

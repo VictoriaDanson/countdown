@@ -5,10 +5,11 @@
   --muted: #3b5d4b;
   --border: rgba(15, 42, 29, 0.12);
   --shadow: 0 10px 25px rgba(13, 61, 38, 0.12);
-  --shadow2: 0 6px 14px rgba(13, 61, 38, 0.10);
+  --shadow2: 0 6px 14px rgba(13, 61, 38, 0.1);
   --green: #1f9d55;
   --green2: #19b46a;
   --danger: #d94a4a;
+  --holiday: #eb3333;
   --radius: 16px;
   --radius-sm: 12px;
   --focus: 0 0 0 4px rgba(31, 157, 85, 0.18);
@@ -25,17 +26,32 @@ body {
 
 body {
   margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Noto Sans CJK SC",
-    "Microsoft YaHei", Arial, sans-serif;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'PingFang SC',
+    'Noto Sans CJK SC',
+    'Microsoft YaHei',
+    Arial,
+    sans-serif;
   color: var(--text);
   background:
-    radial-gradient(900px 500px at 10% 10%, rgba(31, 157, 85, 0.12), transparent 60%),
-    radial-gradient(900px 500px at 90% 0%, rgba(25, 180, 106, 0.10), transparent 60%),
+    radial-gradient(
+      900px 500px at 10% 10%,
+      rgba(31, 157, 85, 0.12),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 500px at 90% 0%,
+      rgba(25, 180, 106, 0.1),
+      transparent 60%
+    ),
     var(--bg);
 }
 
 .page {
-  width: min(1100px, calc(100% - 28px));
+  width: min(1200px, calc(100% - 28px));
   margin: 0 auto;
   padding: 22px 0 28px;
 }
@@ -58,14 +74,20 @@ body {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 14px;
-  min-height:20px;
+  min-height: 20px;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1.3fr;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: start;
+}
+
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .card {
@@ -162,7 +184,10 @@ body {
   font-weight: 700;
   font-size: 14px;
   box-shadow: var(--shadow2);
-  transition: transform 0.06s ease, box-shadow 0.12s ease, background 0.12s ease;
+  transition:
+    transform 0.06s ease,
+    box-shadow 0.12s ease,
+    background 0.12s ease;
   user-select: none;
 }
 
@@ -235,11 +260,15 @@ body {
 }
 
 .item {
-  border: 1px solid rgba(15, 42, 29, 0.10);
+  border: 1px solid rgba(15, 42, 29, 0.1);
   border-radius: var(--radius);
   padding: 12px;
   box-shadow: 0 1px 0 rgba(15, 42, 29, 0.04);
-  background: linear-gradient(180deg, rgba(31, 157, 85, 0.05), rgba(31, 157, 85, 0.02));
+  background: linear-gradient(
+    180deg,
+    rgba(31, 157, 85, 0.05),
+    rgba(31, 157, 85, 0.02)
+  );
   cursor: grab;
   user-select: none;
 }
@@ -352,6 +381,193 @@ body {
   color: var(--muted);
   font-size: 12px;
   text-align: center;
+}
+
+/* Calendar Styles */
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+}
+
+.calendarMonth {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text);
+}
+
+.calendarBtn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--green);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+  box-shadow: 0 1px 0 rgba(15, 42, 29, 0.04);
+}
+
+.calendarBtn:hover {
+  background: rgba(31, 157, 85, 0.08);
+  border-color: rgba(31, 157, 85, 0.3);
+  transform: translateY(-1px);
+  box-shadow: var(--focus);
+}
+
+.calendarBtn:active {
+  transform: translateY(0);
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border);
+  padding: 1px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.calendarWeekday {
+  background: rgba(31, 157, 85, 0.08);
+  padding: 8px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.calendarDays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  padding: 1px;
+  border-radius: var(--radius-sm);
+}
+
+.calendarDay {
+  background: #fff;
+  padding: 6px 4px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  position: relative;
+  user-select: none;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 12px;
+  border: 2px solid transparent;
+}
+
+.calendarDay .solar-date {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.calendarDay .lunar-date {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.1;
+  font-weight: 500;
+}
+
+.calendarDay:hover {
+  background: rgba(31, 157, 85, 0.08);
+}
+
+.calendarDay.today {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.calendarDay.today .solar-date,
+.calendarDay.today .lunar-date {
+  color: var(--green);
+}
+
+.calendarDay.selected {
+  border-color: var(--green);
+}
+
+.calendarDay.other-month {
+  color: rgba(15, 42, 29, 0.35);
+}
+
+.calendarDay.holiday {
+  position: relative;
+  background: rgba(235, 51, 51, .05);
+}
+.calendarDay.holiday .solar-date,
+.calendarDay.holiday .lunar-date,
+.calendarDay.weekend .solar-date,
+.calendarDay.weekend .lunar-date {
+  color: var(--holiday);
+}
+
+.calendarDay.holiday.today {
+  background: linear-gradient(135deg, var(--green), var(--green2));
+}
+
+.calendarDay.holiday.today .solar-date,
+.calendarDay.holiday.today .lunar-date {
+  color: #fff;
+}
+
+.calendarDay.holiday.today::after {
+  background: #fff;
+}
+
+.tag {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: var(--green);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  z-index: 1;
+}
+
+.holiday-tag {
+  background: var(--holiday);
+}
+
+.holiday-text {
+  user-select: none;
+}
+
+.makeup-tag {
+  background: #1976d2;
+}
+
+.makeup-text {
+  user-select: none;
+}
+
+.now {
+  user-select: none;
 }
 
 @media (max-width: 920px) {

@@ -1,6 +1,17 @@
 const STORAGE_KEY = "countdown_items_v1";
 
-/** @typedef {{ id: string, title: string, targetISO: string, createdAt: number }} CountdownItem */
+// 默认系统倒计时名称
+const SYSTEM_DEFAULT_NAME = "xiabanban";
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   title: string,
+ *   targetISO: string,
+ *   createdAt: number,
+ *   isSystemDefault?: boolean
+ * }} CountdownItem
+ */
 
 const els = {
   form: document.getElementById("countdownForm"),
@@ -14,6 +25,15 @@ const els = {
   empty: document.getElementById("emptyState"),
   chip: document.getElementById("countChip"),
   sortBtn: document.getElementById("sortBtn"),
+  presetBar: document.getElementById("presetBar"),
+  holidayTts: document.getElementById("holidayTts"),
+  presetUpdateHint: document.getElementById("presetUpdateHint"),
+  // Calendar elements
+  calendar: document.getElementById("calendar"),
+  prevMonth: document.getElementById("prevMonth"),
+  nextMonth: document.getElementById("nextMonth"),
+  currentMonth: document.getElementById("currentMonth"),
+  calendarDays: document.getElementById("calendarDays"),
 };
 
 /** @returns {CountdownItem[]} */
@@ -30,6 +50,7 @@ function loadItems() {
         title: String(x.title || ""),
         targetISO: String(x.targetISO || ""),
         createdAt: Number(x.createdAt || Date.now()),
+        isSystemDefault: Boolean(x.isSystemDefault),
       }))
       .filter((x) => x.id && x.title && x.targetISO);
   } catch {
@@ -53,6 +74,215 @@ function setHint(message, isError = false) {
 
 function pad2(n) {
   return String(n).padStart(2, "0");
+}
+
+// ---- 节假日计算（周六日 + 可选法定节假日配置） ----
+
+// 节假日数据来源：holiday-data.js（由 Node 脚本生成）
+const CURRENT_YEAR = new Date().getFullYear();
+const HOLIDAY_DATA = (typeof window !== "undefined" && window.HOLIDAY_DATA) || {};
+
+const HOLIDAY_DATES = [];
+const WORKDAY_OVERRIDES = [];
+let FESTIVAL_PRESETS = {};
+
+(() => {
+  const entry = HOLIDAY_DATA[String(CURRENT_YEAR)];
+  if (!entry || typeof entry !== "object") return;
+
+  if (Array.isArray(entry.HOLIDAY_DATES)) {
+    for (const d of entry.HOLIDAY_DATES) {
+      if (typeof d === "string") HOLIDAY_DATES.push(d);
+    }
+  }
+
+  if (Array.isArray(entry.WORKDAY_OVERRIDES)) {
+    for (const d of entry.WORKDAY_OVERRIDES) {
+      if (typeof d === "string") WORKDAY_OVERRIDES.push(d);
+    }
+  }
+
+  if (entry.FESTIVAL_PRESETS && typeof entry.FESTIVAL_PRESETS === "object") {
+    FESTIVAL_PRESETS = entry.FESTIVAL_PRESETS;
+  }
+})();
+
+function dateKey(date) {
+  const y = date.getFullYear();
+  const m = pad2(date.getMonth() + 1);
+  const d = pad2(date.getDate());
+  return `${y}-${m}-${d}`;
+}
+
+function isWeekend(date) {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+}
+
+function isHolidayDate(date) {
+  const key = dateKey(date);
+  if (HOLIDAY_DATES.indexOf(key) !== -1) return true;
+
+  if (isWeekend(date)) {
+    if (WORKDAY_OVERRIDES.indexOf(key) !== -1) return false;
+    return true;
+  }
+
+  return false;
+}
+
+function buildDateTime(date, h, m, s) {
+  const d = new Date(date.getTime());
+  d.setHours(h, m, s, 0);
+  return d;
+}
+
+// ---- 法定节假日快速预设：节日按钮 + 00:00 目标时间 ----
+
+const FESTIVAL_ORDER = [
+  "元旦",
+  "春节",
+  "清明节",
+  "劳动节",
+  "端午节",
+  "中秋节",
+  "国庆节",
+];
+
+/**
+ * 判断当前节假日快速预设是否需要更新
+ * 规则：
+ * 1. 当前年份在 HOLIDAY_DATA 里不存在
+ * 2. 距离当前年份结束 <= 15 天，且下一年数据尚未准备好时，提示准备更新下一年
+ */
+function needsFestivalPresetUpdate(now) {
+  const year = now.getFullYear();
+  const yearKey = String(year);
+  const nextYearKey = String(year + 1);
+  const entry = HOLIDAY_DATA[yearKey];
+  const nextEntry = HOLIDAY_DATA[nextYearKey];
+
+  /** @type {string[]} */
+  const reasons = [];
+
+  // 1. 当前年份在 HOLIDAY_DATA 里不存在
+  if (!entry || typeof entry !== "object") {
+    reasons.push(`当前年份 ${year} 的节假日数据在 HOLIDAY_DATA 中不存在。`);
+  }
+
+  // 2. 距离当前年份结束 <= 15 天，且下一年数据尚未准备好
+  const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+  const msLeft = yearEnd.getTime() - now.getTime();
+  const daysLeft = msLeft / (24 * 60 * 60 * 1000);
+  if (daysLeft <= 15 && (!nextEntry || typeof nextEntry !== "object" || nextEntry.HOLIDAY_DATES?.length === 0)) {
+    reasons.push(
+      `距离 ${year} 年结束仅剩约 ${Math.max(0, Math.floor(daysLeft))} 天，请准备更新 ${
+        year + 1
+      } 年的节假日数据。`,
+    );
+  }
+
+  return {
+    need: reasons.length > 0,
+    reasons,
+  };
+}
+
+function renderFestivalPresets() {
+  if (!els.presetBar) return;
+
+  const todayKey = dateKey(new Date());
+
+  // 只展示“今天之后”的节假日快速预设
+  const names = FESTIVAL_ORDER.filter((name) => {
+    if (!Object.prototype.hasOwnProperty.call(FESTIVAL_PRESETS, name)) return false;
+    const d = FESTIVAL_PRESETS[name];
+    if (typeof d !== "string" || !d) return false;
+    return d > todayKey;
+  });
+
+  if (!names.length) return;
+
+  const html = names
+    .map(
+      (name) => `
+        <button
+          type="button"
+          class="iconBtn"
+          data-festival="${name}"
+          title="快速预设：${name}"
+        >
+          ${name}
+        </button>
+      `,
+    )
+    .join("");
+
+  els.presetBar.insertAdjacentHTML("beforeend", html);
+}
+
+// 查找从当前时间起最近的一次节假日的「前一天 18:00」：
+// - xiabanban 默认目标时间统一为 18:00
+// - 从明天开始往后找节假日
+// - 对每个节假日，计算其前一天 18:00，选第一个还在未来的作为目标
+function findNextHolidayTarget(now) {
+  const today = new Date(now.getTime());
+  today.setHours(0, 0, 0, 0);
+  const candidate = new Date(today.getTime());
+
+  for (let i = 1; i <= 365; i++) {
+    candidate.setDate(candidate.getDate() + 1);
+
+    if (!isHolidayDate(candidate)) {
+      continue;
+    }
+
+    // 节假日的前一天 18:00 作为目标
+    const dayBefore = new Date(candidate.getTime());
+    dayBefore.setDate(dayBefore.getDate() - 1);
+    const target = buildDateTime(dayBefore, 18, 0, 0);
+
+    if (target.getTime() > now.getTime()) {
+      return target;
+    }
+  }
+
+  // 兜底：如果一年内都没找到合适的目标，就用今天 18:00
+  return buildDateTime(today, 18, 0, 0);
+}
+
+function ensureSystemDefaultCountdown() {
+  const now = new Date();
+  const targetDate = findNextHolidayTarget(now);
+  const targetISO = targetDate.toISOString();
+
+  let existing = null;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].isSystemDefault) {
+      existing = items[i];
+      break;
+    }
+  }
+
+  if (!existing) {
+    const newItem = {
+      id: uid(),
+      title: SYSTEM_DEFAULT_NAME,
+      targetISO,
+      createdAt: Date.now(),
+      isSystemDefault: true,
+    };
+    items = [newItem, ...items];
+    saveItems(items);
+    return;
+  }
+
+  const currentTarget = new Date(existing.targetISO);
+  if (Number.isNaN(currentTarget.getTime()) || currentTarget.getTime() <= now.getTime()) {
+    existing.targetISO = targetISO;
+    existing.isSystemDefault = true;
+    saveItems(items);
+  }
 }
 
 function formatTarget(targetDate) {
@@ -98,6 +328,7 @@ function render(items) {
     .map((item) => {
       const target = new Date(item.targetISO);
       const targetText = isNaN(target.getTime()) ? "无效时间" : formatTarget(target);
+      const isSystemDefault = Boolean(item.isSystemDefault);
       return `
         <li class="item" data-id="${escapeHtml(item.id)}" draggable="true">
           <div class="itemTop">
@@ -105,14 +336,18 @@ function render(items) {
               <div class="itemTitle">${escapeHtml(item.title)}</div>
               <div class="itemMeta">目标：${escapeHtml(targetText)}</div>
             </div>
-            <div class="itemActions">
-              <button class="iconBtn" type="button" data-action="edit" aria-label="编辑">
-                编辑
-              </button>
-              <button class="iconBtn danger" type="button" data-action="delete" aria-label="删除">
-                删除
-              </button>
-            </div>
+            ${
+              isSystemDefault
+                ? ""
+                : `<div class="itemActions">
+                     <button class="iconBtn" type="button" data-action="edit" aria-label="编辑">
+                       编辑
+                     </button>
+                     <button class="iconBtn danger" type="button" data-action="delete" aria-label="删除">
+                       删除
+                     </button>
+                   </div>`
+            }
           </div>
           <div class="timeLeft" data-role="time">
             <div class="pill"><div class="pillNum" data-k="days">-</div><div class="pillLabel">天</div></div>
@@ -124,6 +359,19 @@ function render(items) {
       `;
     })
     .join("");
+}
+
+// 按目标时间从近到远排序
+/** @param {CountdownItem[]} list */
+function sortItemsByTimeAsc(list) {
+  return [...list].sort((a, b) => {
+    const ta = new Date(a.targetISO).getTime();
+    const tb = new Date(b.targetISO).getTime();
+    if (Number.isNaN(ta) && Number.isNaN(tb)) return 0;
+    if (Number.isNaN(ta)) return 1;
+    if (Number.isNaN(tb)) return -1;
+    return ta - tb;
+  });
 }
 
 /** @param {CountdownItem[]} items */
@@ -210,6 +458,23 @@ function clearFormAndExitEdit() {
   exitEditMode();
 }
 
+// 确保存在一个名为 "xiabanban" 的默认倒计时
+ensureSystemDefaultCountdown();
+
+// 初始渲染法定节假日快速预设按钮
+renderFestivalPresets();
+
+// 判断是否需要更新快速预设，并在页面显示提示
+if (els.presetUpdateHint) {
+  const { need, reasons } = needsFestivalPresetUpdate(new Date());
+  if (need) {
+    els.presetUpdateHint.textContent =
+      "节假日快速预设可能需要更新，请更新 holiday-data.js：" + reasons.join(" ");
+  } else {
+    els.presetUpdateHint.textContent = "";
+  }
+}
+
 // 初始渲染（使用本地存储中的顺序）
 render(items);
 tick(items);
@@ -224,11 +489,41 @@ els.form.addEventListener("submit", (e) => {
     return;
   }
 
+  // 检查是否存在相同标题和目标时间的倒计时，避免重复保存
+  const duplicateItem = items.find(
+    (x) =>
+      (!editingId || x.id !== editingId) &&
+      x.title === res.title &&
+      x.targetISO === res.targetISO,
+  );
+  if (duplicateItem) {
+    setHint("已存在相同的倒计时，请勿重复保存", true);
+
+    // 列表中高亮重复的卡片：绿色渐变边框闪烁 2 下后消失
+    const li = els.list.querySelector(`.item[data-id="${CSS.escape(duplicateItem.id)}"]`);
+    if (li) {
+      li.classList.remove("duplicate-highlight");
+      // 强制回流，确保重复添加类时动画会重新触发
+      void li.offsetWidth;
+      li.classList.add("duplicate-highlight");
+
+      const handleAnimationEnd = () => {
+        li.classList.remove("duplicate-highlight");
+        li.removeEventListener("animationend", handleAnimationEnd);
+      };
+      li.addEventListener("animationend", handleAnimationEnd);
+    }
+
+    return;
+  }
+
   if (editingId) {
     // 更新已存在的倒计时
     items = items.map((x) =>
       x.id === editingId ? { ...x, title: res.title, targetISO: res.targetISO } : x,
     );
+    // 保存前按时间从近到远排序
+    items = sortItemsByTimeAsc(items);
     saveItems(items);
     render(items);
     tick(items);
@@ -247,8 +542,8 @@ els.form.addEventListener("submit", (e) => {
       createdAt: Date.now(),
     };
 
-    // 新增的倒计时默认加到最上面，之后可以拖动调整
-    items = [newItem, ...items];
+    // 新增后按时间从近到远排序
+    items = sortItemsByTimeAsc([newItem, ...items]);
     saveItems(items);
     render(items);
     tick(items);
@@ -273,6 +568,15 @@ els.list.addEventListener("click", (e) => {
   const id = li.getAttribute("data-id");
   if (!id) return;
 
+  const item = items.find((x) => x.id === id);
+  if (!item) return;
+
+  // 系统默认倒计时不可编辑或删除
+  if (item.isSystemDefault) {
+    setHint("默认倒计时不可编辑或删除", true);
+    return;
+  }
+
   if (action === "delete") {
     items = items.filter((x) => x.id !== id);
     saveItems(items);
@@ -288,11 +592,37 @@ els.list.addEventListener("click", (e) => {
       }
     }
   } else if (action === "edit") {
-    const item = items.find((x) => x.id === id);
-    if (!item) return;
     enterEditMode(item);
   }
 });
+
+// 节日快速预设：点击按钮，自动填充标题/日期/时间（00:00），等待用户保存
+if (els.presetBar) {
+  els.presetBar.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-festival]");
+    if (!btn) return;
+
+    const festName = btn.getAttribute("data-festival");
+    if (!festName) return;
+
+    const dateKey = FESTIVAL_PRESETS[festName];
+    if (!dateKey) {
+      setHint(`未找到【${festName}】的节假日日期，请先更新节假日数据`, true);
+      return;
+    }
+
+    // 退出编辑状态，清空表单
+    exitEditMode();
+    clearForm();
+
+    // 快速预设：标题 = 节日名，日期 = 节日当天，时间 = 00:00
+    els.title.value = festName;
+    els.date.value = dateKey;
+    els.time.value = "00:00";
+
+    setHint(`已应用【${festName}】预设（${dateKey} 00:00），请确认后保存。`, false);
+  });
+}
 
 window.addEventListener("storage", (e) => {
   if (e.key !== STORAGE_KEY) return;
@@ -304,6 +634,25 @@ window.addEventListener("storage", (e) => {
 window.addEventListener("beforeunload", () => {
   clearInterval(timer);
 });
+
+// 最近放假安排 TTS 文案
+function loadHolidayTts() {
+  if (!els.holidayTts) return;
+
+  fetch("https://timor.tech/api/holiday/tts")
+    .then((res) => res.json())
+    .then((data) => {
+      if (data && data.code === 0 && data.tts) {
+        els.holidayTts.textContent = data.tts;
+      }
+    })
+    .catch(() => {
+      // 忽略错误，不展示文案即可
+    });
+}
+
+// 页面加载时拉取一次文案
+loadHolidayTts();
 
 if (els.sortBtn) {
   let sortAsc = true; // true: 近 -> 远, false: 远 -> 近
