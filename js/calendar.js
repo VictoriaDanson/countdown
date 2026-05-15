@@ -22,8 +22,10 @@ function solarToLunar(date) {
 
 // Get calendar elements
 const calendarEl = document.getElementById('calendar')
+const holidaySelect = document.getElementById('holidaySelect')
 const prevMonthBtn = document.getElementById('prevMonth')
 const nextMonthBtn = document.getElementById('nextMonth')
+const todayBtn = document.getElementById('todayBtn')
 const currentMonthEl = document.getElementById('currentMonth')
 const calendarDaysEl = document.getElementById('calendarDays')
 
@@ -198,6 +200,16 @@ function renderCalendar() {
       if (dateInput) {
         dateInput.value = dateStr
       }
+
+      // Update date details display
+      try {
+        // 调用 script.js 中的 updateDateDetails 函数
+        if (typeof updateDateDetails === 'function') {
+          updateDateDetails();
+        }
+      } catch (error) {
+        console.error('更新日期详情失败:', error);
+      }
     })
 
     calendarDaysEl.appendChild(dayElement)
@@ -206,12 +218,72 @@ function renderCalendar() {
 
 // Calendar navigation
 prevMonthBtn.addEventListener('click', () => {
+  const currentSelectedDate = selectedDate
   currentDate.setMonth(currentDate.getMonth() - 1)
+  holidaySelect.value = ''
+  // if (currentSelectedDate) {
+  //   const [year, month, day] = currentSelectedDate.split('-').map(Number)
+  //   const targetDate = new Date(year, month - 1, day)
+  //   const newMonth = currentDate.getMonth()
+  //   const newYear = currentDate.getFullYear()
+  //   // Try to set the same day in the new month
+  //   let targetDay = day
+  //   let adjustedDate = new Date(newYear, newMonth, targetDay)
+  //   // If the day doesn't exist in the new month (e.g., Feb 30), adjust to last day
+  //   if (adjustedDate.getMonth() !== newMonth) {
+  //     const lastDay = new Date(newYear, newMonth + 1, 0).getDate()
+  //     targetDay = lastDay
+  //     adjustedDate = new Date(newYear, newMonth, targetDay)
+  //   }
+  //   currentDate = adjustedDate
+  //   selectedDate = formatDate(adjustedDate)
+  // }
   renderCalendar()
 })
 
 nextMonthBtn.addEventListener('click', () => {
+  const currentSelectedDate = selectedDate
   currentDate.setMonth(currentDate.getMonth() + 1)
+  holidaySelect.value = ''
+  // if (currentSelectedDate) {
+  //   const [year, month, day] = currentSelectedDate.split('-').map(Number)
+  //   const targetDate = new Date(year, month - 1, day)
+  //   const newMonth = currentDate.getMonth()
+  //   const newYear = currentDate.getFullYear()
+  //   // Try to set the same day in the new month
+  //   let targetDay = day
+  //   let adjustedDate = new Date(newYear, newMonth, targetDay)
+  //   // If the day doesn't exist in the new month (e.g., Feb 30), adjust to last day
+  //   if (adjustedDate.getMonth() !== newMonth) {
+  //     const lastDay = new Date(newYear, newMonth + 1, 0).getDate()
+  //     targetDay = lastDay
+  //     adjustedDate = new Date(newYear, newMonth, targetDay)
+  //   }
+  //   currentDate = adjustedDate
+  //   selectedDate = formatDate(adjustedDate)
+  // }
+  renderCalendar()
+})
+
+// Holiday select - jump to selected holiday
+holidaySelect.addEventListener('change', (e) => {
+  const selectedHoliday = e.target.value
+  if (selectedHoliday && window.HOLIDAY_DATA && window.HOLIDAY_DATA['2026']) {
+    const festivalPresets = window.HOLIDAY_DATA['2026'].FESTIVAL_PRESETS
+    if (festivalPresets[selectedHoliday]) {
+      const holidayDate = new Date(festivalPresets[selectedHoliday])
+      currentDate = holidayDate
+      selectedDate = formatDate(holidayDate)
+      renderCalendar()
+    }
+  }
+})
+
+// Today button - go back to current date
+todayBtn.addEventListener('click', () => {
+  currentDate = new Date()
+  selectedDate = formatDate(currentDate)
+  holidaySelect.value = ''
   renderCalendar()
 })
 
@@ -220,4 +292,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-select today's date
   selectedDate = formatDate(new Date())
   renderCalendar()
+
+  // 初始化时更新日期详情
+  try {
+    // 调用 script.js 中的 updateDateDetails 函数
+    if (typeof updateDateDetails === 'function') {
+      updateDateDetails();
+    }
+  } catch (error) {
+    console.error('初始化日期详情失败:', error);
+  }
 })
+
+// 获取选中日期详情卡片信息
+function getSelectedDateDetails() {
+  const d = lunisolar(selectedDate)
+  console.log("d.theGods==", d.theGods)
+  const dInfo ={
+    year: lunisolar(selectedDate).format('cY') + '年 '+ lunisolar(selectedDate).format('cZ'),
+    day: d.lunar.getMonthName() + d.lunar.getDayName(),
+    good: d.theGods.getGoodActs(1),
+    bad: d.theGods.getBadActs(1)
+  }
+  return dInfo;
+}

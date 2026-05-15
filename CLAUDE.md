@@ -25,12 +25,14 @@ This is a simple countdown web application built with vanilla HTML, CSS, and Jav
 - `js/script.js` - Main application logic
 - `js/calendar.js` - Calendar component with dual-date display (separate module)
 - `js/holiday-data.js` - Auto-generated static holiday data
+- `js/lib/lunisolar@2.6.0.js` - Third-party lunar calendar library
 - `scripts/generate-holidays.js` - Node.js script to fetch and generate holiday data
+- `package.json` - npm scripts for holiday data generation
 
 ### Module Separation
-- Main application logic (`js/script.js`) manages countdowns, form handling, and drag-drop
-- Calendar component (`js/calendar.js`) is a standalone module for date selection
-- DOM element references are isolated within each module to avoid conflicts
+- **Main Application** (`js/script.js`): Manages countdowns, form handling, drag-drop, localStorage persistence, and system default timer
+- **Calendar Component** (`js/calendar.js`): Standalone module for date selection with dual-date display (solar + lunar)
+- **Holiday Data System**: Separate module that provides holiday information for calculations
 
 ### Data Flow
 1. User creates/edits countdown via form or clicks calendar date
@@ -39,6 +41,18 @@ This is a simple countdown web application built with vanilla HTML, CSS, and Jav
 4. Countdown list rendered with real-time updates every second
 5. Holiday data loaded from `js/holiday-data.js` (auto-generated)
 6. Calendar updates date input when a date is selected
+
+### Countdown Data Structure
+Each countdown is an object with:
+```typescript
+{
+  id: string,
+  title: string,
+  targetISO: string, // ISO format datetime string
+  createdAt: number,
+  isSystemDefault?: boolean // only for "xiabanban"
+}
+```
 
 ### Holiday Data System
 - Fetches from `https://timor.tech/api/holiday/year/{year}`
@@ -51,6 +65,9 @@ This is a simple countdown web application built with vanilla HTML, CSS, and Jav
 ## Development Commands
 
 ```bash
+# Install dependencies (if needed)
+npm install
+
 # Generate holiday data for current year
 npm start
 
@@ -61,29 +78,26 @@ node scripts/generate-holidays.js 2026
 # No build step - open index.html directly in browser
 ```
 
-## Code Patterns
+## Important Patterns and Conventions
 
-### Countdown Items
-Each countdown is an object with:
-```typescript
-{
-  id: string,
-  title: string,
-  targetISO: string, // ISO format datetime string
-  createdAt: number,
-  isSystemDefault?: boolean // only for "xiabanban"
-}
-```
+### DOM Element References
+- Main app uses `els` object for frequently accessed DOM elements
+- Calendar uses individual variables (`calendarEl`, `prevMonthBtn`, etc.) to avoid conflicts
+- All DOM interactions cache element references for performance
 
 ### Holiday Calculation
 - `isHolidayDate(date)` - Checks if date is a holiday (weekend or in holiday list)
 - `findNextHolidayTarget(now)` - Finds next holiday day at 18:00
 - Weekend workdays are handled via `WORKDAY_OVERRIDES` array
 
-### Element References
-- Main app uses `els` object for frequently accessed DOM elements
-- Calendar uses individual variables (`calendarEl`, `prevMonthBtn`, etc.) to avoid conflicts
-- All DOM interactions cache element references for performance
+### System Default Timer
+- The "xiabanban" countdown is system-managed and cannot be edited/deleted
+- Automatically updates to target the next holiday day at 18:00
+- Prevents duplicate system timers
+
+### Duplicate Detection
+- Prevents saving countdowns with same title + target time combinations
+- Highlights existing duplicates with green gradient border animation
 
 ### Calendar Component
 - Dual-date display with solar date on top, lunar date at bottom
@@ -94,10 +108,9 @@ Each countdown is an object with:
 
 ## Important Notes
 
-- The "xiabanban" countdown is system-managed and cannot be edited/deleted
-- Duplicate detection prevents same title + target time combinations
 - Holiday data must be updated annually or when new year is approaching (<15 days remaining)
 - The calendar is a standalone module - do not mix DOM element references
 - Lunar calendar data is simplified for demonstration - use proper lunar library in production
 - All scripts are loaded from the `js/` directory
 - No build process required - direct browser deployment
+- System default timer ("xiabanban") is automatically maintained and cannot be modified by users

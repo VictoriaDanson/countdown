@@ -1,19 +1,28 @@
+/**
+ * ===== 倒计时应用主逻辑 =====
+ * 主要功能：创建、编辑、删除倒计时，拖动排序，节假日数据集成
+ */
+
+// 存储键名 - 用于 localStorage
 const STORAGE_KEY = "countdown_items_v1";
 
-// 默认系统倒计时名称
+// 默认系统倒计时名称 - "下班班"自动定位到下一个节假日18:00
 const SYSTEM_DEFAULT_NAME = "xiabanban";
 
 /**
+ * 倒计时项目的类型定义
  * @typedef {{
- *   id: string,
- *   title: string,
- *   targetISO: string,
- *   createdAt: number,
- *   isSystemDefault?: boolean
+ *   id: string,                  // 唯一标识符
+ *   title: string,               // 倒计时标题
+ *   targetISO: string,           // 目标时间 ISO 字符串
+ *   createdAt: number,           // 创建时间戳
+ *   isSystemDefault?: boolean    // 是否为系统默认倒计时
  * }} CountdownItem
  */
 
+// DOM 元素缓存 - 避免重复查询，提升性能
 const els = {
+  // 表单元素
   form: document.getElementById("countdownForm"),
   title: document.getElementById("titleInput"),
   date: document.getElementById("dateInput"),
@@ -21,22 +30,25 @@ const els = {
   hint: document.getElementById("formHint"),
   clearBtn: document.getElementById("clearBtn"),
   saveBtn: document.getElementById("saveBtn"),
+  // 列表相关
   list: document.getElementById("countdownList"),
   empty: document.getElementById("emptyState"),
   chip: document.getElementById("countChip"),
-  sortBtn: document.getElementById("sortBtn"),
+  sortBtn: document.getElementById("sortBtn"),  
+  // 节假日预设
   presetBar: document.getElementById("presetBar"),
   holidayTts: document.getElementById("holidayTts"),
-  presetUpdateHint: document.getElementById("presetUpdateHint"),
-  // Calendar elements
-  calendar: document.getElementById("calendar"),
-  prevMonth: document.getElementById("prevMonth"),
-  nextMonth: document.getElementById("nextMonth"),
-  currentMonth: document.getElementById("currentMonth"),
-  calendarDays: document.getElementById("calendarDays"),
+  presetUpdateHint: document.getElementById("presetUpdateHint")
 };
+/**
+ * ===== 数据存储管理 =====
+ */
 
-/** @returns {CountdownItem[]} */
+/**
+ * 从 localStorage 加载倒计时项目
+ * 包含数据验证和类型转换
+ * @returns {CountdownItem[]} 倒计时项目数组
+ */
 function loadItems() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -684,6 +696,40 @@ if (els.sortBtn) {
       els.sortBtn.title = "按目标时间排序（最远的在前）";
     }
   });
+}
+
+// ---- 日期详情显示 ----
+
+/**
+ * 更新选中日期详情显示
+ */
+function updateDateDetails() {
+  // if (!selectedDate) return;
+
+  // try {
+  //   // 获取日期详情
+  //   const details = getSelectedDateDetails();
+
+  //   // 获取日期对象
+  //   const date = new Date(selectedDate);
+  //   const dateStr = formatDate(date);
+  //   const festivalName = getFestivalName(date);
+  //   const isHoliday = isOfficialHoliday(date);
+  //   const isWeekendDay = isWeekend(date);
+  //   const isMakeUp = isMakeUpWorkday(date);
+
+  //   // 更新显示
+  //   document.getElementById('solarDate').textContent = dateStr;
+  //   document.getElementById('lunarDate').textContent = details.day;
+  //   document.getElementById('festivalName').textContent = festivalName || '-';
+  //   document.getElementById('isHoliday').textContent = isHoliday ? '是' : '否';
+  //   document.getElementById('isWeekend').textContent = isWeekendDay ? '是' : '否';
+  //   document.getElementById('isMakeUpWorkday').textContent = isMakeUp ? '是' : '否';
+  //   document.getElementById('goodActs').textContent = details.good || '-';
+  //   document.getElementById('badActs').textContent = details.bad || '-';
+  // } catch (error) {
+  //   console.error('更新日期详情失败:', error);
+  // }
 }
 
 // ---- 拖动排序 ----

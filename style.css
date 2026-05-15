@@ -396,6 +396,26 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 8px;
+  gap: 8px;
+}
+
+.holidaySelect {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 1px 0 rgba(15, 42, 29, 0.04);
+}
+
+.holidaySelect:focus {
+  border-color: rgba(31, 157, 85, 0.5);
+  box-shadow: var(--focus);
 }
 
 .calendarMonth {
@@ -431,6 +451,20 @@ body {
 
 .calendarBtn:active {
   transform: translateY(0);
+}
+
+.todayBtn {
+  width: 60px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  box-shadow: 0 1px 0 rgba(15, 42, 29, 0.04);
 }
 
 .calendarGrid {
