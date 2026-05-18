@@ -7,15 +7,17 @@
  * @returns {Object} 农历信息
  */
 function solarToLunar(date) {
-  const nullLunar = { fullName: '' }
+  const nullLunar = { lunarDay: '', solarTerm:'' }
   if (typeof lunisolar === 'undefined') return nullLunar
   // lunisolar 使用 1-12 月
   const dl = lunisolar(date).lunar
   if (!dl) return nullLunar
-  const lunarMonth = dl.getMonthName() || ''
+  // const lunarMonth = dl.getMonthName() || ''
   const lunarDay = dl.getDayName() || ''
+  const solarTerm = lunisolar(date).solarTerm // 获取节气信息（如果需要）
   return {
-    fullName: lunarDay // lunarMonth.replace('月', '‧') + lunarDay
+    lunarDay: lunarDay, // lunarMonth.replace('月', '‧') + lunarDay
+    solarTerm: solarTerm ? solarTerm.name : ''
   }
 }
 
@@ -31,11 +33,25 @@ const calendarDaysEl = document.getElementById('calendarDays')
 let currentDate = new Date()
 let selectedDate = null
 
-function formatDate(date) {
+function formatDate(date, format = 'yyyy-MM-dd') {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+
+  switch (format) {
+    case 'yyyy-MM-dd':
+      return `${year}-${month}-${day}`
+    case 'yyyy年MM月dd日':
+      return `${year}年${month}月${day}日`
+    case 'MM/dd/yyyy':
+      return `${month}/${day}/${year}`
+    case 'dd-MM-yyyy':
+      return `${day}-${month}-${year}`
+    case 'yyyy/MM/dd':
+      return `${year}/${month}/${day}`
+    default:
+      return `${year}-${month}-${day}`
+  }
 }
 
 function isToday(date) {
@@ -145,13 +161,13 @@ function renderCalendar() {
     const dayElement = document.createElement('div')
     const date = new Date(year, month, day)
     const dateStr = formatDate(date)
-    const lunarDate = solarToLunar(date).fullName || ''
+    const { lunarDay, solarTerm } = solarToLunar(date)
     const festivalName = getFestivalName(date)
 
     dayElement.className = 'calendarDay'
     dayElement.innerHTML = `
       <span class="solar-date">${day}</span>
-      ${festivalName ? `<span class="lunar-date festival-name">${festivalName}</span>` : lunarDate ? `<span class="lunar-date">${lunarDate}</span>` : ''}
+      ${festivalName ? `<span class="lunar-date festival-name">${festivalName}</span>` : solarTerm ? `<span class="lunar-date">${solarTerm}</span>` : lunarDay ? `<span class="lunar-date">${lunarDay}</span>` : ''}
       ${isToday(date) ? `<div class="tag"><span class="now">今</span></div>` : ''}
       ${isOfficialHoliday(date) ? `<div class="tag holiday-tag"><span class="holiday-text">休</span></div>` : ''}
       ${isMakeUpWorkday(date) ? `<div class="tag makeup-tag"><span class="makeup-text">班</span></div>` : ''}
@@ -313,7 +329,7 @@ function getSelectedDateDetails() {
   for (let i = 0; i < allDirections.length; i++) {
     const [d24, god] = allDirections[i]
     if (['喜神', '福神', '財神'].includes(god.name)) {
-      wealth += `${god.name}${d24.direction}${d24.angle}°   `
+      wealth += `${god.name}${d24.direction}   `
     }
   }
   // const stem = lunisolar(new Date()).char8.hour.stem
@@ -330,4 +346,58 @@ function getSelectedDateDetails() {
     wealth
   }
   return dInfo
+}
+// 距离今天 已经过去/还有 多少天
+function getDayDiff(date) {
+  const today = new Date()
+  const selectedDate = new Date(date)
+  const diffTime = selectedDate - today
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  // 获取节日名称
+  const festivalName = getFestivalName(selectedDate)
+  const dateStr = formatDate(selectedDate, 'yyyy年MM月dd日')
+
+  if (diffDays === 0) {
+    // 今天 - 显示下一个假期
+    const nextHoliday = findNextHoliday(today)
+    if (nextHoliday) {
+      const nextHolidayDate = new Date(nextHoliday)
+      const nextHolidayDiff = Math.ceil((nextHolidayDate - today) / (1000 * 60 * 60 * 24))
+      const nextHolidayName = getFestivalName(nextHolidayDate)
+      return `距离 ${nextHolidayName || '下一个假期'} 还有${nextHolidayDiff}天`
+    }
+    return '今天是今天'
+  } else if (diffDays < 0) {
+    // 过去 - 显示已过去多少天
+    const absDiff = Math.abs(diffDays)
+    return `距离 ${dateStr} 已经过去${absDiff}天`
+  } else {
+    // 未来 - 显示还有多少天
+    return `距离 ${dateStr} 还有${diffDays}天`
+  }
+}
+
+// 查找下一个假期
+function findNextHoliday(currentDate) {
+  if (!window.HOLIDAY_DATA || !window.HOLIDAY_DATA['2026']) return null
+
+  const holidays = window.HOLIDAY_DATA['2026'].HOLIDAY_DATES
+  const festivalPresets = window.HOLIDAY_DATA['2026'].FESTIVAL_PRESETS
+
+  // 合并所有假期日期（官方假期 + 节日预设）
+  const allHolidays = [...holidays]
+  Object.values(festivalPresets).forEach(date => {
+    if (!allHolidays.includes(date)) {
+      allHolidays.push(date)
+    }
+  })
+
+  // 找到比当前日期晚的下一个假期
+  const nextHoliday = allHolidays
+    .map(date => new Date(date))
+    .filter(holidayDate => holidayDate > currentDate)
+    .sort((a, b) => a - b)[0]
+
+  return nextHoliday ? formatDate(nextHoliday) : null
 }

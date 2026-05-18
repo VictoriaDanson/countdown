@@ -22,6 +22,7 @@
 html,
 body {
   height: 100%;
+  color: var(--text);
 }
 
 body {
@@ -652,7 +653,7 @@ body {
   display: flex;
   flex-direction: column;
   font-size: 14px;
-  color: var(--text);
+  margin-bottom: 5px;
 }
 .date-yiji div {
   margin-bottom: 6px;
@@ -672,5 +673,14 @@ body {
     &.ji {
       background: #333;
     }
+  }
+}
+.day-diff {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  img {
+    margin-right: 6px;
   }
 }

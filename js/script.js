@@ -715,6 +715,7 @@ function updateDateDetails() {
     document.getElementById('wealth').textContent = details.wealth || '';
     document.getElementById('goodActs').textContent = details.good || '';
     document.getElementById('badActs').textContent = details.bad || '';
+    document.getElementById('dayDiff').textContent = getDayDiff(selectedDate);
   } catch (error) {
     console.error('更新日期详情失败:', error);
   }
