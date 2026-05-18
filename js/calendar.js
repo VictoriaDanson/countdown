@@ -197,6 +197,7 @@ function renderCalendar() {
     // Check if selected
     if (selectedDate && dateStr === selectedDate) {
       dayElement.classList.add('selected')
+      updateDateDetails()
     }
 
     // Add click handler
