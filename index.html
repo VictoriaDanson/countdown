@@ -13,8 +13,7 @@
   <title>测试网页</title>
   <link rel="stylesheet" href="./style.css" />
   <script src="https://cdn.jsdelivr.net/npm/lunisolar@2"></script>
-  <!-- <script src="https://cdn.jsdelivr.net/npm/lunisolar@2.6.0/plugins/theGods/dist/theGods.umd.min.js"></script> -->
-
+  <script src="https://cdn.jsdelivr.net/npm/lunisolar@2.6.0/plugins/theGods.js"></script>
 </head>
 
 <body>
@@ -65,43 +64,22 @@
             <div class="calendarDays" id="calendarDays"></div>
           </div>
         </section>
-        <!-- <section class="card">
-          <h2 class="cardTitle">选中日期详情</h2>
-          <div id="dateDetails" class="date-details">
-            <div class="detail-item">
-              <span class="detail-label">公历日期：</span>
-              <span id="solarDate" class="detail-value">-</span>
+        <section class="card">
+          <div class="date-details">
+            <div class="detail detail-l">
+              <span id="solarDay"></span>
+              <span id="solarYear"></span>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">农历日期：</span>
-              <span id="lunarDate" class="detail-value">-</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">节日名称：</span>
-              <span id="festivalName" class="detail-value">-</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">是否节假日：</span>
-              <span id="isHoliday" class="detail-value">-</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">是否周末：</span>
-              <span id="isWeekend" class="detail-value">-</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">是否补班：</span>
-              <span id="isMakeUpWorkday" class="detail-value">-</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">吉日：</span>
-              <span id="goodActs" class="detail-value">-</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">凶日：</span>
-              <span id="badActs" class="detail-value">-</span>
+            <div class="detail">
+              <span>&nbsp;</span>
+              <span id="wealth"></span>
             </div>
           </div>
-        </section> -->
+          <div class="date-yiji">
+            <div><span class="tag-yiji yi">宜</span><span id="goodActs"></span></div>
+            <div><span class="tag-yiji ji">忌</span><span id="badActs"></span></div>
+          </div>
+        </section>
       </div>
       <div class="right-column">
         <section class="card">

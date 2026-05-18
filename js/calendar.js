@@ -1,5 +1,4 @@
 // Calendar functionality
-
 /**
  * 公历日期 转 农历（使用 lunisolar）
  * @param {number} year  公历年
@@ -16,7 +15,7 @@ function solarToLunar(date) {
   const lunarMonth = dl.getMonthName() || ''
   const lunarDay = dl.getDayName() || ''
   return {
-    fullName: lunarMonth.replace('月', '‧') + lunarDay
+    fullName: lunarDay // lunarMonth.replace('月', '‧') + lunarDay
   }
 }
 
@@ -205,10 +204,10 @@ function renderCalendar() {
       try {
         // 调用 script.js 中的 updateDateDetails 函数
         if (typeof updateDateDetails === 'function') {
-          updateDateDetails();
+          updateDateDetails()
         }
       } catch (error) {
-        console.error('更新日期详情失败:', error);
+        console.error('更新日期详情失败:', error)
       }
     })
 
@@ -297,22 +296,38 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     // 调用 script.js 中的 updateDateDetails 函数
     if (typeof updateDateDetails === 'function') {
-      updateDateDetails();
+      updateDateDetails()
     }
   } catch (error) {
-    console.error('初始化日期详情失败:', error);
+    console.error('初始化日期详情失败:', error)
   }
 })
-
+const lunisolar = window.lunisolar
+lunisolar.extend(window.lunisolarPluginTheGods) // 注册插件
 // 获取选中日期详情卡片信息
 function getSelectedDateDetails() {
+  if (!selectedDate) return
   const d = lunisolar(selectedDate)
-  console.log("d.theGods==", d.theGods)
-  const dInfo ={
-    year: lunisolar(selectedDate).format('cY') + '年 '+ lunisolar(selectedDate).format('cZ'),
-    day: d.lunar.getMonthName() + d.lunar.getDayName(),
-    good: d.theGods.getGoodActs(1),
-    bad: d.theGods.getBadActs(1)
+  const allDirections = d.theGods.getAllLuckDirection()
+  let wealth = ''
+  for (let i = 0; i < allDirections.length; i++) {
+    const [d24, god] = allDirections[i]
+    if (['喜神', '福神', '財神'].includes(god.name)) {
+      wealth += `${god.name}${d24.direction}${d24.angle}°   `
+    }
   }
-  return dInfo;
+  // const stem = lunisolar(new Date()).char8.hour.stem
+  // const branch = lunisolar(new Date()).char8.hour.branch
+  // console.log("===", stem.name, branch.name)
+  const dInfo = {
+    year:
+      lunisolar(selectedDate).format('cY') +
+      '年 ' +
+      lunisolar(selectedDate).format('cZ'),
+    day: d.lunar.getMonthName() + d.lunar.getDayName(),
+    good: d.theGods.getGoodActs().join('.'),
+    bad: d.theGods.getBadActs().join('.'),
+    wealth
+  }
+  return dInfo
 }

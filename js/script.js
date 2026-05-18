@@ -704,32 +704,20 @@ if (els.sortBtn) {
  * 更新选中日期详情显示
  */
 function updateDateDetails() {
-  // if (!selectedDate) return;
+  if (!selectedDate) return;
 
-  // try {
-  //   // 获取日期详情
-  //   const details = getSelectedDateDetails();
-
-  //   // 获取日期对象
-  //   const date = new Date(selectedDate);
-  //   const dateStr = formatDate(date);
-  //   const festivalName = getFestivalName(date);
-  //   const isHoliday = isOfficialHoliday(date);
-  //   const isWeekendDay = isWeekend(date);
-  //   const isMakeUp = isMakeUpWorkday(date);
-
-  //   // 更新显示
-  //   document.getElementById('solarDate').textContent = dateStr;
-  //   document.getElementById('lunarDate').textContent = details.day;
-  //   document.getElementById('festivalName').textContent = festivalName || '-';
-  //   document.getElementById('isHoliday').textContent = isHoliday ? '是' : '否';
-  //   document.getElementById('isWeekend').textContent = isWeekendDay ? '是' : '否';
-  //   document.getElementById('isMakeUpWorkday').textContent = isMakeUp ? '是' : '否';
-  //   document.getElementById('goodActs').textContent = details.good || '-';
-  //   document.getElementById('badActs').textContent = details.bad || '-';
-  // } catch (error) {
-  //   console.error('更新日期详情失败:', error);
-  // }
+  try {
+    // 获取日期详情
+    const details = getSelectedDateDetails();
+    // 更新显示
+    document.getElementById('solarDay').textContent = details.day;
+    document.getElementById('solarYear').textContent = details.year;
+    document.getElementById('wealth').textContent = details.wealth || '';
+    document.getElementById('goodActs').textContent = details.good || '';
+    document.getElementById('badActs').textContent = details.bad || '';
+  } catch (error) {
+    console.error('更新日期详情失败:', error);
+  }
 }
 
 // ---- 拖动排序 ----
