@@ -67,11 +67,7 @@ function isOfficialHoliday(date) {
   const dateStr = formatDate(date)
 
   // Check if it's a holiday from HOLIDAY_DATES (official holidays only)
-  if (
-    window.HOLIDAY_DATA &&
-    window.HOLIDAY_DATA['2026'] &&
-    window.HOLIDAY_DATA['2026'].HOLIDAY_DATES.includes(dateStr)
-  ) {
+  if (HOLIDAY_DATES.includes(dateStr)) {
     return true
   }
 
@@ -84,11 +80,7 @@ function isWeekend(date) {
 
   // Check if it's a weekend that's not overridden as a workday
   if (day === 0 || day === 6) {
-    if (
-      window.HOLIDAY_DATA &&
-      window.HOLIDAY_DATA['2026'] &&
-      window.HOLIDAY_DATA['2026'].WORKDAY_OVERRIDES.includes(dateStr)
-    ) {
+    if (WORKDAY_OVERRIDES.includes(dateStr)) {
       return false
     }
     return true
@@ -101,10 +93,7 @@ function isMakeUpWorkday(date) {
   const dateStr = formatDate(date)
 
   // Check if it's in WORKDAY_OVERRIDES (make-up workdays)
-  if (
-    window.HOLIDAY_DATA &&
-    window.HOLIDAY_DATA['2026'] &&
-    window.HOLIDAY_DATA['2026'].WORKDAY_OVERRIDES.includes(dateStr)
+  if (WORKDAY_OVERRIDES.includes(dateStr)
   ) {
     return true
   }
@@ -115,12 +104,8 @@ function isMakeUpWorkday(date) {
 function getFestivalName(date) {
   const dateStr = formatDate(date)
 
-  if (
-    window.HOLIDAY_DATA &&
-    window.HOLIDAY_DATA['2026'] &&
-    window.HOLIDAY_DATA['2026'].FESTIVAL_PRESETS
-  ) {
-    const festivals = window.HOLIDAY_DATA['2026'].FESTIVAL_PRESETS
+  if (FESTIVAL_PRESETS && typeof FESTIVAL_PRESETS === 'object') {
+    const festivals = FESTIVAL_PRESETS
     for (const [festivalName, festivalDate] of Object.entries(festivals)) {
       if (festivalDate === dateStr) {
         return festivalName
@@ -284,10 +269,9 @@ nextMonthBtn.addEventListener('click', () => {
 // Holiday select - jump to selected holiday
 holidaySelect.addEventListener('change', (e) => {
   const selectedHoliday = e.target.value
-  if (selectedHoliday && window.HOLIDAY_DATA && window.HOLIDAY_DATA['2026']) {
-    const festivalPresets = window.HOLIDAY_DATA['2026'].FESTIVAL_PRESETS
-    if (festivalPresets[selectedHoliday]) {
-      const holidayDate = new Date(festivalPresets[selectedHoliday])
+  if (selectedHoliday && FESTIVAL_PRESETS && typeof FESTIVAL_PRESETS === 'object') {
+    if (FESTIVAL_PRESETS[selectedHoliday]) {
+      const holidayDate = new Date(FESTIVAL_PRESETS[selectedHoliday])
       currentDate = holidayDate
       selectedDate = formatDate(holidayDate)
       renderCalendar()
@@ -381,10 +365,10 @@ function getDayDiff(date) {
 
 // 查找下一个假期
 function findNextHoliday(currentDate) {
-  if (!window.HOLIDAY_DATA || !window.HOLIDAY_DATA['2026']) return null
+  if (!HOLIDAY_DATES || !FESTIVAL_PRESETS) return null
 
-  const holidays = window.HOLIDAY_DATA['2026'].HOLIDAY_DATES
-  const festivalPresets = window.HOLIDAY_DATA['2026'].FESTIVAL_PRESETS
+  const holidays = HOLIDAY_DATES
+  const festivalPresets = FESTIVAL_PRESETS
 
   // 合并所有假期日期（官方假期 + 节日预设）
   const allHolidays = [...holidays]
