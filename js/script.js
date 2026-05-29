@@ -252,6 +252,11 @@ function findNextHolidayTarget(now) {
     // 节假日的前一天 18:00 作为目标
     const dayBefore = new Date(candidate.getTime());
     dayBefore.setDate(dayBefore.getDate() - 1);
+    // 如果前一天本身还是节假日（如连续放假期间），则继续往未来找
+    if (isHolidayDate(dayBefore)) {
+      continue;
+    }
+
     const target = buildDateTime(dayBefore, 18, 0, 0);
 
     if (target.getTime() > now.getTime()) {
