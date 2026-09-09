@@ -207,6 +207,7 @@ async function main() {
       );
     } catch (err) {
       console.error(`Failed to fetch year ${year}:`, err.message || err);
+      process.exitCode = 1;
     }
   }
 
