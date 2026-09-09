@@ -1,0 +1,46 @@
+name: Generate Holiday Data
+
+on:
+  schedule:
+    # 北京时间每年12月31日0点 = UTC 12月30日16点
+    - cron: '0 16 30 12 *'
+  workflow_dispatch:
+    inputs:
+      year:
+        description: '指定年份（留空则生成下一年）'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate holiday data
+        run: |
+          if [ -n "${{ github.event.inputs.year }}" ]; then
+            YEAR="${{ github.event.inputs.year }}"
+          else
+            YEAR=$(date -u -d '+1 day' +%Y)
+          fi
+          echo "Generating holiday data for year: $YEAR"
+          node scripts/generate-holidays.js "$YEAR"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add js/holiday-data.js
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: auto-generate holiday data"
+            git push
+          fi
