@@ -16,8 +16,12 @@ const path = require("path");
  */
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
+    const options = new URL(url);
+    options.headers = {
+      "User-Agent": "Mozilla/5.0 (compatible; countdown-holidays/1.0)",
+    };
     https
-      .get(url, (res) => {
+      .get(options, (res) => {
         if (res.statusCode !== 200) {
           reject(new Error(`Request failed: ${res.statusCode}`));
           res.resume();
