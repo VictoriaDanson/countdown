@@ -18,13 +18,20 @@ function fetchJson(url) {
   return new Promise((resolve, reject) => {
     const options = new URL(url);
     options.headers = {
-      "User-Agent": "Mozilla/5.0 (compatible; countdown-holidays/1.0)",
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+      Accept: "application/json, text/plain, */*",
+      "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
     };
     https
       .get(options, (res) => {
         if (res.statusCode !== 200) {
-          reject(new Error(`Request failed: ${res.statusCode}`));
-          res.resume();
+          const errChunks = [];
+          res.on("data", (c) => errChunks.push(c));
+          res.on("end", () => {
+            const body = Buffer.concat(errChunks).toString("utf8").slice(0, 500);
+            reject(new Error(`Request failed: ${res.statusCode}\n${body}`));
+          });
           return;
         }
 
