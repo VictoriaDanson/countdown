@@ -117,6 +117,18 @@ let FESTIVAL_PRESETS = {};
   if (entry.FESTIVAL_PRESETS && typeof entry.FESTIVAL_PRESETS === "object") {
     FESTIVAL_PRESETS = entry.FESTIVAL_PRESETS;
   }
+
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+  const hasUpcoming = Object.values(FESTIVAL_PRESETS).some(
+    (d) => typeof d === "string" && d > todayStr
+  );
+  if (!hasUpcoming) {
+    const nextEntry = HOLIDAY_DATA[String(CURRENT_YEAR + 1)];
+    if (nextEntry && typeof nextEntry === "object" && nextEntry.FESTIVAL_PRESETS) {
+      FESTIVAL_PRESETS = nextEntry.FESTIVAL_PRESETS;
+    }
+  }
 })();
 
 function dateKey(date) {

@@ -63,56 +63,50 @@ function isToday(date) {
   )
 }
 
+function getYearHolidayData(year) {
+  const data = (typeof window !== 'undefined' && window.HOLIDAY_DATA) || {}
+  const entry = data[String(year)]
+  if (!entry || typeof entry !== 'object') return null
+  return entry
+}
+
 function isOfficialHoliday(date) {
   const dateStr = formatDate(date)
-
-  // Check if it's a holiday from HOLIDAY_DATES (official holidays only)
-  if (HOLIDAY_DATES.includes(dateStr)) {
+  const entry = getYearHolidayData(date.getFullYear())
+  if (entry && Array.isArray(entry.HOLIDAY_DATES) && entry.HOLIDAY_DATES.includes(dateStr)) {
     return true
   }
-
   return false
 }
 
 function isWeekend(date) {
   const day = date.getDay()
+  if (day !== 0 && day !== 6) return false
   const dateStr = formatDate(date)
-
-  // Check if it's a weekend that's not overridden as a workday
-  if (day === 0 || day === 6) {
-    if (WORKDAY_OVERRIDES.includes(dateStr)) {
-      return false
-    }
-    return true
+  const entry = getYearHolidayData(date.getFullYear())
+  if (entry && Array.isArray(entry.WORKDAY_OVERRIDES) && entry.WORKDAY_OVERRIDES.includes(dateStr)) {
+    return false
   }
-
-  return false
+  return true
 }
 
 function isMakeUpWorkday(date) {
   const dateStr = formatDate(date)
-
-  // Check if it's in WORKDAY_OVERRIDES (make-up workdays)
-  if (WORKDAY_OVERRIDES.includes(dateStr)
-  ) {
+  const entry = getYearHolidayData(date.getFullYear())
+  if (entry && Array.isArray(entry.WORKDAY_OVERRIDES) && entry.WORKDAY_OVERRIDES.includes(dateStr)) {
     return true
   }
-
   return false
 }
 
 function getFestivalName(date) {
   const dateStr = formatDate(date)
-
-  if (FESTIVAL_PRESETS && typeof FESTIVAL_PRESETS === 'object') {
-    const festivals = FESTIVAL_PRESETS
-    for (const [festivalName, festivalDate] of Object.entries(festivals)) {
-      if (festivalDate === dateStr) {
-        return festivalName
-      }
+  const entry = getYearHolidayData(date.getFullYear())
+  if (entry && entry.FESTIVAL_PRESETS && typeof entry.FESTIVAL_PRESETS === 'object') {
+    for (const [name, d] of Object.entries(entry.FESTIVAL_PRESETS)) {
+      if (d === dateStr) return name
     }
   }
-
   return null
 }
 
